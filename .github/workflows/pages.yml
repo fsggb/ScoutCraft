@@ -1,0 +1,89 @@
+name: Deploy ScoutCraft
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1" # chaque lundi : nouvelle version amont ?
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: scoutcraft-pages
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Relever les versions amont
+        id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          awk '/upstream:/{print $2}' apps.yml | sort -u | while read -r repo; do
+            echo "$repo $(gh release view --repo "$repo" --json tagName --jq .tagName)"
+          done > versions.new
+          cat versions.new
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && cmp -s versions.new upstream-versions.txt; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Aucune nouvelle version amont." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            mv versions.new upstream-versions.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add upstream-versions.txt
+            git diff --cached --quiet || { git commit -m "Versions amont mises à jour"; git push || true; }
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assembler la suite
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf build && mkdir -p build
+          cp -a assets index.html styles.css build/
+          while read -r key display upstream_repo output_dir asset_prefix upstream_name; do
+            release_dir="$RUNNER_TEMP/releases/$key"
+            mkdir -p "$release_dir" "build/$output_dir"
+            if ! gh release download --repo "$upstream_repo" --pattern "${asset_prefix}-web-*.zip" --dir "$release_dir" --clobber; then
+              echo "::warning::Pas de version web pour $upstream_repo"; continue
+            fi
+            archive="$(find "$release_dir" -maxdepth 1 -type f -name '*.zip' -print -quit)"
+            unzip -q "$archive" -d "$release_dir/unpacked"
+            root="$(find "$release_dir/unpacked" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+            cp -a "$root"/. "build/$output_dir"/
+            find "build/$output_dir" -type f -name '*.html' -exec sed -i \
+              -e "s/${upstream_name}/${display}/g" \
+              -e 's/<html lang="en">/<html lang="fr">/g' \
+              -e 's/Loading /Chargement de /g' {} +
+          done < <(awk '/^- key:/{key=$3} /display_name:/{display=$2} /upstream:/{upstream=$2} /output_dir:/{out=$2} /asset_prefix:/{prefix=$2} /upstream_name:/{name=$2; print key,display,upstream,out,prefix,name}' apps.yml)
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4
