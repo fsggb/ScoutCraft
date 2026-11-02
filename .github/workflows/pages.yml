@@ -72,6 +72,7 @@ jobs:
               -e "s/${upstream_name}/${display}/g" \
               -e 's/<html lang="en">/<html lang="fr">/g' \
               -e 's/Loading /Chargement de /g' {} +
+            find "build/$output_dir" -type f -name '*.html' -exec sed -i               "s#</body>#<script src=\"/ScoutHub/scouthub-client.js\" data-app=\"$display\"></script></body>#" {} +
           done < <(awk '/^- key:/{key=$3} /display_name:/{display=$2} /upstream:/{upstream=$2} /output_dir:/{out=$2} /asset_prefix:/{prefix=$2} /upstream_name:/{name=$2; print key,display,upstream,out,prefix,name}' apps.yml)
       - uses: actions/upload-pages-artifact@v3
         with:
