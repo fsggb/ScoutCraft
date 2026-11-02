@@ -43,3 +43,4 @@ footer a:hover{color:var(--gold-dark)}
 @media(prefers-reduced-motion:reduce){.app-card{transition:none}.app-card:hover{transform:none}}
 .brand-logo{width:40px;height:40px;object-fit:contain}
 .topnav{display:flex;align-items:center;gap:22px}
+.app-card img{object-fit:contain}.equiv{display:block;margin-top:2px;color:var(--gold-dark);font-style:normal;font-size:11px}

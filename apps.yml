@@ -4,75 +4,88 @@
   output_dir: ScoutWord
   asset_prefix: wordcraft
   upstream_name: WordCraft
+  icon: Word.png
 - key: grid
   display_name: ScoutGrid
   upstream: storytold/gridcraft
   output_dir: ScoutGrid
   asset_prefix: gridcraft
   upstream_name: GridCraft
+  icon: Excel.png
 - key: deck
   display_name: ScoutDeck
   upstream: storytold/deckcraft
   output_dir: ScoutDeck
   asset_prefix: deckcraft
   upstream_name: DeckCraft
+  icon: PowerPoint.png
 - key: pdf
   display_name: ScoutPDF
   upstream: storytold/pdfcraft
   output_dir: ScoutPDF
   asset_prefix: pdfcraft
   upstream_name: PdfCraft
+  icon: PDF.png
 - key: design
   display_name: ScoutDesign
   upstream: storytold/designcraft
   output_dir: ScoutDesign
   asset_prefix: designcraft
   upstream_name: DesignCraft
+  icon: InDesign.png
 - key: photo
   display_name: ScoutPhoto
   upstream: storytold/photocraft
   output_dir: ScoutPhoto
   asset_prefix: photocraft
   upstream_name: PhotoCraft
+  icon: Photoshop.png
 - key: light
   display_name: ScoutLight
   upstream: storytold/lightcraft
   output_dir: ScoutLight
   asset_prefix: lightcraft
   upstream_name: LightCraft
+  icon: Lightroom.png
 - key: vector
   display_name: ScoutVector
   upstream: storytold/vectorcraft
   output_dir: ScoutVector
   asset_prefix: vectorcraft
   upstream_name: VectorCraft
+  icon: Illustrator.png
 - key: fig
   display_name: ScoutFig
   upstream: storytold/figcraft
   output_dir: ScoutFig
   asset_prefix: figcraft
   upstream_name: FigCraft
+  icon: Figma.png
 - key: texture
   display_name: ScoutTexture
   upstream: storytold/texturecraft
   output_dir: ScoutTexture
   asset_prefix: texturecraft
   upstream_name: TextureCraft
+  icon: -
 - key: film
   display_name: ScoutFilm
   upstream: storytold/filmcraft
   output_dir: ScoutFilm
   asset_prefix: filmcraft
   upstream_name: FilmCraft
+  icon: Premiere.png
 - key: effect
   display_name: ScoutEffect
   upstream: storytold/effectcraft
   output_dir: ScoutEffect
   asset_prefix: effectcraft
   upstream_name: EffectCraft
+  icon: AfterEffects.png
 - key: sound
   display_name: ScoutSound
   upstream: storytold/soundcraft
   output_dir: ScoutSound
   asset_prefix: soundcraft
   upstream_name: SoundCraft
+  icon: -
