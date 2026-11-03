@@ -59,6 +59,7 @@ jobs:
           rm -rf build && mkdir -p build
           cp -a assets index.html build/
           while read -r key display upstream_repo output_dir asset_prefix upstream_name icon; do
+            disp="${display//_/ }"
             release_dir="$RUNNER_TEMP/releases/$key"
             mkdir -p "$release_dir" "build/$output_dir"
             if ! gh release download --repo "$upstream_repo" --pattern "${asset_prefix}-web-*.zip" --dir "$release_dir" --clobber; then
@@ -69,10 +70,10 @@ jobs:
             root="$(find "$release_dir/unpacked" -mindepth 1 -maxdepth 1 -type d -print -quit)"
             cp -a "$root"/. "build/$output_dir"/
             find "build/$output_dir" -type f -name '*.html' -exec sed -i \
-              -e "s/${upstream_name}/${display}/g" \
+              -e "s/${upstream_name}/${disp}/g" \
               -e 's/<html lang="en">/<html lang="fr">/g' \
               -e 's/Loading /Chargement de /g' {} +
-            find "build/$output_dir" -type f -name '*.html' -exec sed -i               "s#</body>#<script src=\"/ScoutHub/scouthub-client.js\" data-app=\"$display\"></script></body>#" {} +
+            find "build/$output_dir" -type f -name '*.html' -exec sed -i               "s#</body>#<script src=\"/ScoutHub/scouthub-client.js\" data-app=\"$disp\"></script></body>#" {} +
           done < <(awk '/^- key:/{key=$3} /display_name:/{display=$2} /upstream:/{upstream=$2} /output_dir:/{out=$2} /asset_prefix:/{prefix=$2} /upstream_name:/{name=$2} /icon:/{print key,display,upstream,out,prefix,name,$2}' apps.yml)
       - uses: actions/upload-pages-artifact@v3
         with:

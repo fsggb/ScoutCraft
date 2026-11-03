@@ -1,91 +1,91 @@
 - key: word
-  display_name: ScoutWord
+  display_name: Word
   upstream: storytold/wordcraft
-  output_dir: ScoutWord
+  output_dir: Word
   asset_prefix: wordcraft
   upstream_name: WordCraft
   icon: Word.png
 - key: grid
-  display_name: ScoutGrid
+  display_name: Excel
   upstream: storytold/gridcraft
-  output_dir: ScoutGrid
+  output_dir: Excel
   asset_prefix: gridcraft
   upstream_name: GridCraft
   icon: Excel.png
 - key: deck
-  display_name: ScoutDeck
+  display_name: PowerPoint
   upstream: storytold/deckcraft
-  output_dir: ScoutDeck
+  output_dir: PowerPoint
   asset_prefix: deckcraft
   upstream_name: DeckCraft
   icon: PowerPoint.png
 - key: pdf
-  display_name: ScoutPDF
+  display_name: Acrobat
   upstream: storytold/pdfcraft
-  output_dir: ScoutPDF
+  output_dir: Acrobat
   asset_prefix: pdfcraft
   upstream_name: PdfCraft
   icon: PDF.png
 - key: design
-  display_name: ScoutDesign
+  display_name: InDesign
   upstream: storytold/designcraft
-  output_dir: ScoutDesign
+  output_dir: InDesign
   asset_prefix: designcraft
   upstream_name: DesignCraft
   icon: InDesign.png
 - key: photo
-  display_name: ScoutPhoto
+  display_name: Photoshop
   upstream: storytold/photocraft
-  output_dir: ScoutPhoto
+  output_dir: Photoshop
   asset_prefix: photocraft
   upstream_name: PhotoCraft
   icon: Photoshop.png
 - key: light
-  display_name: ScoutLight
+  display_name: Lightroom
   upstream: storytold/lightcraft
-  output_dir: ScoutLight
+  output_dir: Lightroom
   asset_prefix: lightcraft
   upstream_name: LightCraft
   icon: Lightroom.png
 - key: vector
-  display_name: ScoutVector
+  display_name: Illustrator
   upstream: storytold/vectorcraft
-  output_dir: ScoutVector
+  output_dir: Illustrator
   asset_prefix: vectorcraft
   upstream_name: VectorCraft
   icon: Illustrator.png
 - key: fig
-  display_name: ScoutFig
+  display_name: Figma
   upstream: storytold/figcraft
-  output_dir: ScoutFig
+  output_dir: Figma
   asset_prefix: figcraft
   upstream_name: FigCraft
   icon: Figma.png
 - key: texture
-  display_name: ScoutTexture
+  display_name: Substance_Painter
   upstream: storytold/texturecraft
-  output_dir: ScoutTexture
+  output_dir: SubstancePainter
   asset_prefix: texturecraft
   upstream_name: TextureCraft
   icon: -
 - key: film
-  display_name: ScoutFilm
+  display_name: Premiere_Pro
   upstream: storytold/filmcraft
-  output_dir: ScoutFilm
+  output_dir: PremierePro
   asset_prefix: filmcraft
   upstream_name: FilmCraft
   icon: Premiere.png
 - key: effect
-  display_name: ScoutEffect
+  display_name: After_Effects
   upstream: storytold/effectcraft
-  output_dir: ScoutEffect
+  output_dir: AfterEffects
   asset_prefix: effectcraft
   upstream_name: EffectCraft
   icon: AfterEffects.png
 - key: sound
-  display_name: ScoutSound
+  display_name: Pro_Tools
   upstream: storytold/soundcraft
-  output_dir: ScoutSound
+  output_dir: ProTools
   asset_prefix: soundcraft
   upstream_name: SoundCraft
   icon: -
