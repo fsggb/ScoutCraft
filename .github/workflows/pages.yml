@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf build && mkdir -p build
-          cp -a assets index.html styles.css build/
+          cp -a assets index.html build/
           while read -r key display upstream_repo output_dir asset_prefix upstream_name icon; do
             release_dir="$RUNNER_TEMP/releases/$key"
             mkdir -p "$release_dir" "build/$output_dir"
