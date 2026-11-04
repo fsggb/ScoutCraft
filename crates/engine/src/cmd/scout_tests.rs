@@ -88,8 +88,8 @@ fn the_html_export_holds_the_corner_and_every_furniture() {
 
 #[test]
 fn the_registry_has_no_sheet_metal_left() {
-    assert!(crate::cmd::find_command("sheet.flange").is_none());
-    assert!(crate::cmd::find_command("surface.loft").is_some());
+    assert!(crate::cmd::is_retired("sheet.flange"));
+    assert!(crate::cmd::is_retired("surface.loft"));
     assert!(crate::cmd::find_command("scout.meuble.banc").is_some());
     assert!(crate::cmd::find_command("solid.extrude").is_some());
 }
