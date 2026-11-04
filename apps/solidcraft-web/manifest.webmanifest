@@ -1,0 +1,17 @@
+{
+  "name": "SoLeadWorks",
+  "short_name": "SoLeadWorks",
+  "description": "Conception 3D de meubles et de coins de patrouille pour le camp scout, avec historique, plans et nomenclatures.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000761",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icons/32x32/soleadworks.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "icons/256x256/soleadworks.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "icons/512x512/soleadworks.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

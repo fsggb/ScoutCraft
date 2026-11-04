@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>SoLeadWorks</title>
+  <meta name="description" content="Conception 3D paramétrique de meubles et de coins de patrouille pour le camp scout, dans le navigateur.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SoLeadWorks">
+  <meta property="og:title" content="SoLeadWorks : meubles et coins de patrouille en 3D">
+  <meta property="og:description" content="Conception 3D paramétrique de meubles et de coins de patrouille pour le camp scout, dans le navigateur.">
+  <meta property="og:url" content="https://fsggb.github.io/SoLeadWorks/">
+  <meta property="og:image" content="https://fsggb.github.io/SoLeadWorks/icons/512x512/soleadworks.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="SoLeadWorks : meubles et coins de patrouille en 3D">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="SoLeadWorks : meubles et coins de patrouille en 3D">
+  <meta name="twitter:description" content="Conception 3D paramétrique de meubles et de coins de patrouille pour le camp scout, dans le navigateur.">
+  <meta name="twitter:image" content="https://fsggb.github.io/SoLeadWorks/icons/512x512/soleadworks.png">
+  <meta name="twitter:image:alt" content="SoLeadWorks : meubles et coins de patrouille en 3D">
+  <link data-trunk rel="rust" data-bin="solidcraft-web" data-wasm-opt="z" data-weak-refs />
+  <link data-trunk rel="copy-file" href="../../assets/fonts/biz-udp-gothic/BIZUDPGothic-Regular.ttf" data-target-path="fonts" />
+  <link data-trunk rel="copy-file" href="../../assets/fonts/biz-udp-gothic/OFL.txt" data-target-path="fonts" />
+  <link data-trunk rel="copy-file" href="../../assets/fonts/craft-ui-sc/CraftUI-SC.otf" data-target-path="fonts" />
+  <link data-trunk rel="copy-file" href="../../assets/fonts/craft-ui-sc/OFL.txt" data-target-path="fonts/craft-ui-sc" />
+  <link data-trunk rel="copy-file" href="../../assets/fonts/craft-ui-tc/CraftUI-TC.otf" data-target-path="fonts" />
+  <link data-trunk rel="copy-file" href="../../assets/fonts/craft-ui-tc/OFL.txt" data-target-path="fonts/craft-ui-tc" />
+  <link data-trunk rel="css" href="../../assets/styles/web/loading.css" />
+  <link data-trunk rel="copy-file" href="../../assets/styles/web/loading-logo.svg" />
+  <!-- Installable as an app (manifest.webmanifest); the icons are the Linux exports of the app mark. -->
+  <meta name="theme-color" content="#000761">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/32x32/soleadworks.png">
+  <link rel="apple-touch-icon" href="icons/256x256/soleadworks.png">
+  <link data-trunk rel="copy-file" href="manifest.webmanifest" />
+  <link data-trunk rel="copy-file" href="../../assets/branding/soleadworks/32x32/soleadworks.png" data-target-path="icons/32x32" />
+  <link data-trunk rel="copy-file" href="../../assets/branding/soleadworks/256x256/soleadworks.png" data-target-path="icons/256x256" />
+  <link data-trunk rel="copy-file" href="../../assets/branding/soleadworks/512x512/soleadworks.png" data-target-path="icons/512x512" />
+</head>
+<body>
+  <canvas id="solidcraft_canvas"></canvas>
+  <div id="solidcraft_loading" role="status"><img src="loading-logo.svg" alt=""><span class="sr-only">Chargement de SoLeadWorks&hellip;</span></div>
+  <script src="/ScoutHub/scouthub-client.js" data-app="SoLeadWorks" data-open="event"></script>
+</body>
+</html>
