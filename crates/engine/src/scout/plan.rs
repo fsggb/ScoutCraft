@@ -5,7 +5,7 @@
 
 use std::fmt::Write as _;
 
-use super::templates::{Axis, CutRow, Pole, cut_list, extent, wood_metres};
+use super::pole::{CutRow, Pole, cut_list, extent, joint_summary, wood_metres};
 
 const SHEET_W: f64 = 420.0;
 const SHEET_H: f64 = 297.0;
@@ -34,33 +34,28 @@ fn nice_scale(d: f64) -> f64 {
     [1.0, 2.0, 5.0, 10.0, 20.0, 25.0, 50.0, 100.0, 200.0, 500.0].into_iter().find(|n| *n >= d).unwrap_or(1000.0)
 }
 
-fn idx(a: Axis) -> usize {
-    match a {
-        Axis::X => 0,
-        Axis::Y => 1,
-        Axis::Z => 2,
-    }
-}
-
 /// One orthographic view: the poles projected on the axes `(iu, iv)`, v up, top-left of its box at
-/// `(ox, oy)` in sheet millimetres, `scale` sheet mm per mm.
+/// `(ox, oy)` in sheet millimetres, `scale` sheet mm per mm. Every pole is a thick line, a circle
+/// when it runs along the line of sight.
 fn view(out: &mut String, poles: &[Pole], (iu, iv): (usize, usize), (ox, oy): (f64, f64), scale: f64, size: (f64, f64), lo: [f64; 3], title: &str) {
     let _ = writeln!(out, "<g class=\"view\"><text x=\"{:.2}\" y=\"{:.2}\" class=\"t\">{}</text>", ox, oy - 3.0, esc(title));
     let px = |u: f64| ox + (u - lo[iu]) * scale;
     let py = |v: f64| oy + (size.1 - (v - lo[iv])) * scale;
-    for p in poles {
-        let (s, e, r) = (p.origin, p.end(), p.diameter / 2.0);
-        let a = idx(p.axis);
-        if a == iu {
-            let (x0, x1) = (s[iu].min(e[iu]), s[iu].max(e[iu]));
-            let (y0, y1) = (s[iv] - r, s[iv] + r);
-            let _ = writeln!(out, "<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" class=\"p\"/>", px(x0), py(y1), (x1 - x0) * scale, (y1 - y0) * scale);
-        } else if a == iv {
-            let (y0, y1) = (s[iv].min(e[iv]), s[iv].max(e[iv]));
-            let (x0, x1) = (s[iu] - r, s[iu] + r);
-            let _ = writeln!(out, "<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" class=\"p\"/>", px(x0), py(y1), (x1 - x0) * scale, (y1 - y0) * scale);
-        } else {
+    for p in poles.iter().filter(|p| p.role != "ficelle") {
+        let (s, e, r) = (p.p_start(), p.end(), p.radius());
+        let (du, dv) = (e[iu] - s[iu], e[iv] - s[iv]);
+        if (du * du + dv * dv).sqrt() < 0.5 {
             let _ = writeln!(out, "<circle cx=\"{:.2}\" cy=\"{:.2}\" r=\"{:.2}\" class=\"p\"/>", px(s[iu]), py(s[iv]), r * scale);
+        } else {
+            let _ = writeln!(
+                out,
+                "<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" class=\"pl\" stroke-width=\"{:.2}\"/>",
+                px(s[iu]),
+                py(s[iv]),
+                px(e[iu]),
+                py(e[iv]),
+                (r * 2.0 * scale).max(0.3)
+            );
         }
     }
     out.push_str("</g>\n");
@@ -98,32 +93,38 @@ fn dim_v(out: &mut String, y0: f64, y1: f64, x: f64, text: &str) {
 }
 
 const STYLE: &str = "<style>\
-.p{fill:#e9d3a8;stroke:#4a2f12;stroke-width:.35}\
+.p{fill:#e9d3a8;stroke:#4a2f12;stroke-width:.35}.pl{stroke:#c9a46a;stroke-linecap:butt}\
 .dim line{stroke:#c26a00;stroke-width:.25}.dim text{fill:#c26a00;font:3px sans-serif}\
 .t{font:bold 4px sans-serif;fill:#000761}.b{font:3.2px sans-serif;fill:#1d2330}.h{font:bold 3.2px sans-serif;fill:#000761}\
 .frame{fill:none;stroke:#1d2330;stroke-width:.5}.rule{stroke:#1d2330;stroke-width:.2}\
 </style>";
 
-/// The building order of a furniture, from its poles: legs first, then the rails, then the top.
+/// The building order of a furniture, from its poles: shape, then join, then lay the top.
 pub fn steps(poles: &[Pole]) -> Vec<String> {
-    let rows = cut_list(poles);
-    let n = |role: &str| rows.iter().filter(|r| r.role == role).map(|r| r.count).sum::<usize>();
-    let leg_role = rows.iter().map(|r| r.role).find(|r| *r == "pied" || *r == "montant" || *r == "montant de dossier").unwrap_or("pied");
-    let legs = n("pied") + n("montant") + n("montant de dossier");
-    let mut v = vec![format!("Débiter toutes les pièces d'après la liste de débit ({} pièces, {} m de bois).", poles.len(), format!("{:.1}", wood_metres(poles)))];
-    v.push(format!("Tracer et percer les mortaises dans les {legs} {leg_role}s, à la règle du tiers (tenon = un tiers du diamètre)."));
-    v.push("Façonner les tenons aux deux bouts des traverses.".into());
-    if n("traverse courte") > 0 {
-        v.push("Assembler les deux petits côtés : un pied, une traverse courte, un pied, et cheviller.".into());
+    let joints = joint_summary(poles);
+    let n = |k: &str| joints.iter().filter(|(j, _)| j.contains(k)).map(|(_, c)| *c).sum::<usize>();
+    let mut v = vec![format!("Débiter toutes les pièces d'après la liste de débit ({} pièces, {:.1} m de bois).", poles.len(), wood_metres(poles))];
+    if n("fendu") + n("quart") > 0 {
+        v.push("Fendre les rondins en deux (ou en quarts) dans leur longueur, face plate du bon côté.".into());
     }
-    if n("traverse longue") > 0 {
-        v.push("Relier les deux petits côtés par les traverses longues, cheviller, vérifier l'équerrage aux diagonales.".into());
+    if n("tenon") + n("aronde") > 0 {
+        v.push(format!("Façonner les {} tenons et percer les mortaises correspondantes (tenon = un tiers du diamètre de la pièce qui reçoit).", n("tenon") + n("aronde")));
     }
-    if n("traverse de dossier") > 0 {
-        v.push("Poser les traverses de dossier dans les montants arrière.".into());
+    if n("mi-bois") > 0 {
+        v.push(format!("Tailler les {} mi-bois : chaque pièce est entaillée de la moitié de son épaisseur.", n("mi-bois")));
     }
-    if n("claie") > 0 {
-        v.push("Poser les claies sur les traverses, les régler à écartement régulier et les brêler.".into());
+    v.push("Assembler d'abord les petits côtés, puis les relier ; vérifier l'équerrage aux diagonales.".into());
+    if n("cheville") > 0 {
+        v.push("Percer et poser les chevilles, qui bloquent les assemblages.".into());
+    }
+    if poles.iter().any(|p| p.role == "claie") {
+        v.push("Poser les claies, les régler à écartement régulier et les brêler.".into());
+    }
+    if poles.iter().any(|p| p.role == "ficelle") {
+        v.push("Tendre le filet de ficelle, maille serrée.".into());
+    }
+    if n("brêlage") > 0 {
+        v.push("Brêler les croisements restants.".into());
     }
     v
 }
@@ -138,7 +139,8 @@ fn table(out: &mut String, rows: &[CutRow], x: f64, y: f64) -> f64 {
     let _ = writeln!(out, "<line x1=\"{x:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" class=\"rule\"/>", yy + 1.5, x + 100.0, yy + 1.5);
     yy += 6.0;
     for r in rows {
-        for (i, cell) in [r.count.to_string(), r.role.to_string(), mm(r.diameter), mm(r.length), mm(r.cut_length)].iter().enumerate() {
+        let section = if r.width > 0.0 { format!("{}×{}", mm(r.diameter), mm(r.width)) } else { mm(r.diameter) };
+        for (i, cell) in [r.count.to_string(), r.role.clone(), section, mm(r.length), mm(r.cut_length)].iter().enumerate() {
             let cx = x + [0.0, 9.0, 50.0, 64.0, 80.0][i];
             let _ = writeln!(out, "<text x=\"{cx:.2}\" y=\"{yy:.2}\" class=\"b\">{}</text>", esc(cell));
         }
@@ -153,10 +155,10 @@ pub fn meuble_svg(title: &str, kind: &str, author: &str, poles: &[Pole]) -> Stri
     let lo = {
         let mut lo = [f64::MAX; 3];
         for p in poles {
-            let (s, en) = (p.origin, p.end());
+            let (s, en) = (p.p_start(), p.end());
             for i in 0..3 {
-                let r = if idx(p.axis) == i { 0.0 } else { p.diameter / 2.0 };
-                lo[i] = lo[i].min(s[i].min(en[i]) - r);
+                let spread = p.radius() * (1.0 - p.dir[i] * p.dir[i]).max(0.0).sqrt();
+                lo[i] = lo[i].min(s[i].min(en[i]) - spread);
             }
         }
         if poles.is_empty() { [0.0; 3] } else { lo }
@@ -182,14 +184,8 @@ pub fn meuble_svg(title: &str, kind: &str, author: &str, poles: &[Pole]) -> Stri
     let mut y = table(&mut o, &cut_list(poles), x, 25.0) + 6.0;
     let _ = writeln!(o, "<text x=\"{x}\" y=\"{y:.2}\" class=\"t\">Assemblages</text>");
     y += 6.0;
-    let rows = cut_list(poles);
-    for r in rows.iter().filter(|r| r.joint == super::templates::Joint::TenonMortaise) {
-        let tenon = (r.diameter / 3.0).ceil();
-        let _ = writeln!(o, "<text x=\"{x}\" y=\"{y:.2}\" class=\"b\">{}</text>", esc(&format!("{} × {} : tenon Ø {} mm", r.count, r.role, mm(tenon))));
-        y += 5.0;
-    }
-    if poles.iter().any(|p| p.joint == super::templates::Joint::Posee) {
-        let _ = writeln!(o, "<text x=\"{x}\" y=\"{y:.2}\" class=\"b\">claies : posées sur les traverses et brêlées</text>");
+    for (k, c) in joint_summary(poles) {
+        let _ = writeln!(o, "<text x=\"{x}\" y=\"{y:.2}\" class=\"b\">{}</text>", esc(&format!("{c} × {k}")));
         y += 5.0;
     }
     y += 4.0;
@@ -214,15 +210,15 @@ pub fn meuble_svg(title: &str, kind: &str, author: &str, poles: &[Pole]) -> Stri
 /// An isometric picture of the poles (no scripts: poles are thick lines, far ones first).
 pub fn iso_svg(poles: &[Pole]) -> String {
     let proj = |p: [f64; 3]| ((p[0] - p[1]) * 0.866_025, (p[0] + p[1]) * 0.5 - p[2]);
-    let mut order: Vec<&Pole> = poles.iter().collect();
+    let mut order: Vec<&Pole> = poles.iter().filter(|p| p.role != "ficelle").collect();
     let depth = |p: &Pole| {
-        let (s, e) = (p.origin, p.end());
+        let (s, e) = (p.p_start(), p.end());
         (s[0] + e[0] + s[1] + e[1]) / 2.0 + (s[2] + e[2]) * 0.5
     };
     order.sort_by(|a, b| depth(a).partial_cmp(&depth(b)).unwrap_or(std::cmp::Ordering::Equal));
     let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
     for p in poles {
-        for q in [p.origin, p.end()] {
+        for q in [p.p_start(), p.end()] {
             let (x, y) = proj(q);
             let r = p.diameter / 2.0;
             (x0, y0, x1, y1) = (x0.min(x - r), y0.min(y - r), x1.max(x + r), y1.max(y + r));
@@ -234,9 +230,9 @@ pub fn iso_svg(poles: &[Pole]) -> String {
     let mut o = String::new();
     let _ = writeln!(o, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{:.1} {:.1} {:.1} {:.1}\" class=\"iso\">", x0 - 20.0, y0 - 20.0, x1 - x0 + 40.0, y1 - y0 + 40.0);
     for p in order {
-        let ((ax, ay), (bx, by)) = (proj(p.origin), proj(p.end()));
-        let _ = writeln!(o, "<line x1=\"{ax:.1}\" y1=\"{ay:.1}\" x2=\"{bx:.1}\" y2=\"{by:.1}\" stroke=\"#4a2f12\" stroke-width=\"{:.1}\"/>", p.diameter + 3.0);
-        let _ = writeln!(o, "<line x1=\"{ax:.1}\" y1=\"{ay:.1}\" x2=\"{bx:.1}\" y2=\"{by:.1}\" stroke=\"#d9b77a\" stroke-width=\"{:.1}\"/>", p.diameter);
+        let ((ax, ay), (bx, by)) = (proj(p.p_start()), proj(p.end()));
+        let _ = writeln!(o, "<line x1=\"{ax:.1}\" y1=\"{ay:.1}\" x2=\"{bx:.1}\" y2=\"{by:.1}\" stroke=\"#4a2f12\" stroke-width=\"{:.1}\"/>", p.radius() * 2.0 + 3.0);
+        let _ = writeln!(o, "<line x1=\"{ax:.1}\" y1=\"{ay:.1}\" x2=\"{bx:.1}\" y2=\"{by:.1}\" stroke=\"#d9b77a\" stroke-width=\"{:.1}\"/>", p.radius() * 2.0);
     }
     o.push_str("</svg>\n");
     o
@@ -250,7 +246,8 @@ pub fn meuble_section(title: &str, kind: &str, author: &str, poles: &[Pole]) -> 
     o.push_str(&iso_svg(poles));
     o.push_str("<table><tr><th>Qté</th><th>Pièce</th><th>Ø mm</th><th>Visible</th><th>À débiter</th></tr>");
     for r in cut_list(poles) {
-        let _ = write!(o, "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>", r.count, esc(r.role), mm(r.diameter), mm(r.length), mm(r.cut_length));
+        let section = if r.width > 0.0 { format!("{}×{}", mm(r.diameter), mm(r.width)) } else { mm(r.diameter) };
+        let _ = write!(o, "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>", r.count, esc(&r.role), section, mm(r.length), mm(r.cut_length));
     }
     o.push_str("</table><ol>");
     for s in steps(poles) {
@@ -383,16 +380,21 @@ pub fn coin_svg(title: &str, author: &str, items: &[Placed]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scout::templates::{Dims, TEMPLATES, build};
+    use crate::scout::models::{MODELS, Params, build, model};
+
+    fn poles_of(id: &str) -> Vec<Pole> {
+        model(id).map(|m| build(id, &Params::of(m)).unwrap_or_default()).unwrap_or_default()
+    }
 
     #[test]
     fn a_furniture_plan_is_well_formed_and_complete() {
-        let poles = build("banc", Dims::of(&TEMPLATES[0])).unwrap_or_default();
+        let poles = poles_of("banc");
+        assert_eq!(MODELS.len(), 11);
         let svg = meuble_svg("Banc <1> & co", "Banc", "Lou", &poles);
         assert!(svg.starts_with("<svg") && svg.trim_end().ends_with("</svg>"));
         assert!(svg.contains("Liste de débit") && svg.contains("Montage") && svg.contains("Assemblages"));
         assert!(svg.contains("Banc &lt;1&gt; &amp; co"));
-        assert!(svg.contains("1200"));
+        assert!(svg.contains("1500"));
     }
 
     #[test]
@@ -407,7 +409,7 @@ mod tests {
 
     #[test]
     fn the_html_page_is_self_contained() {
-        let poles = build("table", Dims::of(&TEMPLATES[2])).unwrap_or_default();
+        let poles = poles_of("table");
         let html = page_html("Coin <x>", &[meuble_section("Table", "Table", "Lou", &poles)]);
         assert!(html.starts_with("<!doctype html>") && html.contains("Coin &lt;x&gt;"));
         assert!(!html.contains("<script"));

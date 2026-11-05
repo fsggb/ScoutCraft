@@ -98,7 +98,6 @@ pub struct Section {
 /// Parameters and Configurations stay on every design tab they were on before the ribbon
 /// redesign (MODEL and SHEET METAL), on SKETCH while editing a sketch, on WELDMENTS, and in
 /// MANAGE, their canonical home.
-const CONFIGURE: &[&str] = &["parameters.change"];
 
 /// Commands that stay for agents, MCP and scripts but are not offered to people: the sketch solves
 /// itself after every edit, so a Solve button (and the search hit for it) only confuses; drawn 3D
@@ -106,39 +105,37 @@ const CONFIGURE: &[&str] = &["parameters.change"];
 pub const AGENT_ONLY: &[&str] = &["sketch.solve", "sketch.move3d"];
 
 pub const SECTIONS: &[Section] = &[
-    // SoLeadWorks is for people who have never touched CAD: about as many buttons as the whole
-    // application needs, all in view (a handful per panel, none hidden behind a drop-down).
-    Section {
-        tab: "SCOUT",
-        panel: "MEUBLE",
-        promoted: 6,
-        ids: &["scout.meuble.banc", "scout.meuble.banc_dossier", "scout.meuble.table", "scout.meuble.table_prepa", "scout.meuble.etagere", "scout.meuble.create"],
-    },
-    Section { tab: "SCOUT", panel: "COIN", promoted: 1, ids: &["scout.coin.create"] },
-    Section { tab: "SCOUT", panel: "PIÈCES", promoted: 2, ids: &["solid.cylinder", "solid.box"] },
+    // SoLeadWorks is for people who have never touched CAD, and carries every function of CathIA:
+    // about fifty buttons in all, a few per panel, named in French, none hidden.
+    Section { tab: "SCOUT", panel: "MEUBLE", promoted: 2, ids: &["scout.meuble.create", "scout.coin.create"] },
+    Section { tab: "SCOUT", panel: "PIÈCES", promoted: 4, ids: &["scout.piece.traverse", "scout.piece.equerre", "scout.piece.claies", "scout.piece.filet"] },
+    Section { tab: "SCOUT", panel: "FORMES", promoted: 4, ids: &["solid.box", "solid.cylinder", "solid.sphere", "solid.cone"] },
     Section { tab: "SCOUT", panel: "PLANS", promoted: 4, ids: &["scout.plan.meuble", "scout.plan.coin", "assembly.bom", "scout.export.html"] },
     Section { tab: "SCOUT", panel: "MONTAGE", promoted: 1, ids: &["explode.create"] },
+    Section {
+        tab: "ASSEMBLE",
+        panel: "FAÇONNER",
+        promoted: 4,
+        ids: &["scout.faconner.demi", "scout.faconner.quart", "scout.faconner.couper", "scout.faconner.pointe"],
+    },
+    Section {
+        tab: "ASSEMBLE",
+        panel: "ASSEMBLAGES",
+        promoted: 5,
+        ids: &["scout.assemblage.mibois", "scout.assemblage.tenon", "scout.assemblage.aronde", "scout.assemblage.cheville", "scout.assemblage.brelage"],
+    },
+    Section { tab: "ASSEMBLE", panel: "BOOLÉENS", promoted: 1, ids: &["solid.combine"] },
+    Section { tab: "ASSEMBLE", panel: "GROUPES", promoted: 3, ids: &["component.create", "occurrence.move", "occurrence.ground"] },
     Section { tab: "MODEL", panel: "SKETCH", promoted: 1, ids: &["sketch.create", "sketch.edit"] },
-    Section { tab: "MODEL", panel: "CREATE", promoted: 2, ids: &["solid.extrude", "solid.hole"] },
-    Section { tab: "MODEL", panel: "MODIFY", promoted: 3, ids: &["solid.fillet", "solid.chamfer", "solid.combine"] },
-    Section { tab: "MODEL", panel: "ARRANGE", promoted: 3, ids: &["solid.move", "solid.mirror", "solid.pattern.rectangular"] },
-    Section { tab: "MODEL", panel: "CONFIGURE", promoted: 1, ids: CONFIGURE },
+    Section { tab: "MODEL", panel: "CREATE", promoted: 3, ids: &["solid.extrude", "solid.revolve", "solid.hole"] },
+    Section { tab: "MODEL", panel: "MODIFY", promoted: 2, ids: &["solid.fillet", "solid.chamfer"] },
+    Section { tab: "MODEL", panel: "ARRANGE", promoted: 4, ids: &["solid.move", "solid.mirror", "solid.pattern.rectangular", "solid.pattern.circular"] },
     // Only while a linked design is edited in place, pinned at the right as FINISH SKETCH is.
     Section { tab: "MODEL", panel: "FINISH EDITING", promoted: 1, ids: &["component.finish_edit"] },
-    Section { tab: "ASSEMBLE", panel: "COMPONENTS", promoted: 2, ids: &["component.create", "parts.library"] },
-    Section { tab: "ASSEMBLE", panel: "JOINTS", promoted: 2, ids: &["joint.create", "joint.rigid_group"] },
-    Section { tab: "ASSEMBLE", panel: "POSITION", promoted: 2, ids: &["occurrence.move", "occurrence.ground"] },
-    Section { tab: "INSPECT", panel: "MEASURE", promoted: 2, ids: &["inspect.measure", "inspect.interference"] },
-    Section { tab: "INSPECT", panel: "SECTION", promoted: 1, ids: &["inspect.section"] },
-    Section { tab: "MANAGE", panel: "PARAMETERS", promoted: 1, ids: &["parameters.change"] },
-    Section { tab: "MANAGE", panel: "MATERIALS", promoted: 1, ids: &["material.assign"] },
-    Section { tab: "MANAGE", panel: "DESIGN", promoted: 3, ids: &["edit.checkpoint", "edit.restore_checkpoint", "document.units"] },
-    Section {
-        tab: "VIEW",
-        panel: "VIEWS",
-        promoted: 2,
-        ids: &["view.fit", "view.home", "view.navigate", "view.save", "view.apply", "view.visual_style", "view.grid"],
-    },
+    Section { tab: "INSPECT", panel: "MEASURE", promoted: 3, ids: &["inspect.measure", "inspect.interference", "inspect.section"] },
+    Section { tab: "MANAGE", panel: "HISTORY", promoted: 2, ids: &["edit.checkpoint", "edit.restore_checkpoint"] },
+    Section { tab: "MANAGE", panel: "DESIGN", promoted: 3, ids: &["parameters.change", "material.assign", "document.units"] },
+    Section { tab: "VIEW", panel: "VIEWS", promoted: 3, ids: &["view.fit", "view.home", "view.navigate", "view.visual_style", "view.grid"] },
     Section { tab: "VIEW", panel: "SELECT", promoted: 0, ids: &[] },
     Section {
         tab: "SKETCH",
@@ -150,8 +147,15 @@ pub const SECTIONS: &[Section] = &[
     Section {
         tab: "SKETCH",
         panel: "CONSTRAIN",
-        promoted: 4,
-        ids: &["sketch.dimension", "sketch.constraint.horizontal_vertical", "sketch.constraint.coincident", "sketch.constraint.equal"],
+        promoted: 5,
+        ids: &[
+            "sketch.dimension",
+            "sketch.constraint.horizontal_vertical",
+            "sketch.constraint.coincident",
+            "sketch.constraint.parallel",
+            "sketch.constraint.perpendicular",
+            "sketch.constraint.equal",
+        ],
     },
     Section { tab: "SKETCH", panel: "FINISH SKETCH", promoted: 2, ids: &["sketch.finish", "sketch.cancel"] },
 ];
@@ -305,10 +309,7 @@ pub fn ribbon_family_label(family: &crate::sketch_families::Family) -> &'static 
 
 /// Registry placement → default ribbon destination, after explicit id overrides.
 pub const PLACEMENTS: &[(&str, &str, &str, &str)] = &[
-    ("SCOUT", "MEUBLE", "SCOUT", "MEUBLE"),
-    ("SCOUT", "COIN", "SCOUT", "COIN"),
-    ("SCOUT", "PLANS", "SCOUT", "PLANS"),
-    ("SOLID", "CREATE", "MODEL", "CREATE"),
+        ("SOLID", "CREATE", "MODEL", "CREATE"),
     ("SOLID", "MODIFY", "MODEL", "MODIFY"),
     ("SOLID", "CONSTRUCT", "MODEL", "CONSTRUCT"),
     ("SOLID", "ASSEMBLE", "ASSEMBLE", "JOINTS"),
@@ -365,12 +366,9 @@ pub(crate) fn legacy_render_destination(c: &CommandSpec) -> Option<(&'static str
 /// panel_lists, except the selection filter, which has its own existing controls.
 pub fn layout<'a>(tab: &str, panel: &str, specs: &[&'a CommandSpec]) -> Option<(Vec<&'a CommandSpec>, usize)> {
     let section = SECTIONS.iter().find(|s| s.tab == tab && s.panel == panel)?;
-    let mut out: Vec<_> = section.ids.iter().filter_map(|id| specs.iter().find(|c| c.id == *id).copied()).collect();
-    for c in specs.iter().filter(|c| destination(c) == Some((section.tab, section.panel))) {
-        if !out.iter().any(|o| o.id == c.id) {
-            out.push(*c);
-        }
-    }
+    // SoLeadWorks shows exactly the commands each panel lists: a command that merely shares a
+    // registry placement with one is not added to its drop-down (people would get lost in them).
+    let out: Vec<_> = section.ids.iter().filter_map(|id| specs.iter().find(|c| c.id == *id).copied()).collect();
     Some((out, section.promoted))
 }
 

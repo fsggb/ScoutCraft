@@ -373,7 +373,7 @@ impl Default for UiState {
     fn default() -> Self {
         UiState {
             layout: Default::default(),
-            tab: "MODEL".into(),
+            tab: "SCOUT".into(),
             ribbon_context: None,
             sketch_return_tab: None,
             show_browser: true,
