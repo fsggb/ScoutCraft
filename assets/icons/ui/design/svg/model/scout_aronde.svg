@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Queue d’aronde</title>
+  <path d="M38 8L56 8A4 4 0 0 1 60 12L60 52A4 4 0 0 1 56 56L38 56A4 4 0 0 1 34 52L34 12A4 4 0 0 1 38 8Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M34 22L46 18L46 46L34 42Z" fill="#8e9faf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M7 24L25 24A3 3 0 0 1 28 27L28 37A3 3 0 0 1 25 40L7 40A3 3 0 0 1 4 37L4 27A3 3 0 0 1 7 24Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M28 28L46 19L46 45L28 36Z" fill="#328bd3" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M28 24L28 40" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

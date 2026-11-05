@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Mi-bois</title>
+  <path d="M4 38L60 38L60 52L4 52Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M26 4L40 4L40 60L26 60Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M26 38L40 38L40 52L26 52Z" fill="#b9ddf8" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M26 28L40 28" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="2 3"/>
+</svg>

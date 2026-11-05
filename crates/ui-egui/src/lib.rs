@@ -195,6 +195,7 @@ pub mod op_auto;
 pub mod open_elsewhere;
 pub(crate) mod open_meshing;
 pub mod params_dialog;
+pub mod scout_ui;
 pub mod personal_sheet_rules;
 pub(crate) mod pick_index;
 pub(crate) mod place_gizmo;
@@ -373,7 +374,7 @@ impl Default for UiState {
     fn default() -> Self {
         UiState {
             layout: Default::default(),
-            tab: "SCOUT".into(),
+            tab: "CRÉER".into(),
             ribbon_context: None,
             sketch_return_tab: None,
             show_browser: true,
@@ -515,6 +516,8 @@ pub struct SolveApp {
     pub sketch_report: Option<sketch_report::SketchReport>,
     /// The Bill of Materials window, when open.
     pub bom: Option<bom_panel::BomPanel>,
+    /// The Dessin technique and Nomenclature windows (SoLeadWorks).
+    pub scout_win: scout_ui::State,
     material_card_review: Option<material_card_review::ReviewWindow>,
     /// Context menus, rename box and Properties window.
     pub menu: context_menu::MenuState,
@@ -760,6 +763,7 @@ impl SolveApp {
             design_properties: None,
             sketch_report: None,
             bom: None,
+            scout_win: scout_ui::State::default(),
             material_card_review: None,
             menu: context_menu::MenuState::default(),
             gesture: mouse_gesture::State::default(),
@@ -1741,6 +1745,14 @@ impl SolveApp {
         }
         if id == "parameters.change" {
             params_dialog::open(self);
+            return;
+        }
+        if id == "scout.atelier.dessin" {
+            scout_ui::open_dessin(self);
+            return;
+        }
+        if id == "scout.atelier.nomenclature" {
+            scout_ui::open_nomenclature(self);
             return;
         }
         if matches!(id, "document.metadata" | "document.metadata.set") {
@@ -2832,6 +2844,8 @@ impl SolveApp {
         design_properties::show(self, ui.ctx());
         sketch_report::show(self, ui.ctx());
         bom_panel::show(self, ui.ctx());
+        scout_ui::show_dessin(self, ui.ctx());
+        scout_ui::show_nomenclature(self, ui.ctx());
         material_card_review::show(self, ui.ctx());
         recovery_ui::show(self, ui.ctx());
         stand_up::show(self, ui.ctx());

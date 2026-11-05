@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Filet de ficelle</title>
+  <path d="M9 6L55 6A3 3 0 0 1 58 9L58 55A3 3 0 0 1 55 58L9 58A3 3 0 0 1 6 55L6 9A3 3 0 0 1 9 6Z" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M19 6L19 58" fill="none" stroke="#8e9faf" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M32 6L32 58" fill="none" stroke="#8e9faf" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M45 6L45 58" fill="none" stroke="#8e9faf" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M6 19L58 19" fill="none" stroke="#8e9faf" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M6 32L58 32" fill="none" stroke="#8e9faf" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M6 45L58 45" fill="none" stroke="#8e9faf" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="19" cy="19" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="19" cy="32" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="19" cy="45" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="32" cy="19" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="32" cy="45" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="45" cy="19" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="45" cy="32" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="45" cy="45" r="2.2" fill="#328bd3" stroke="#236ead" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

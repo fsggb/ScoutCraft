@@ -38,6 +38,14 @@ listée, ni trouvée, ni exécutable, ni placée sur le ruban.
 - tout est relu depuis les propriétés enregistrées dans le design : un fichier rouvert plus tard se
   planifie de la même façon.
 
+## Refonte sur le modèle de CathIA
+
+- 26 icônes `scout_*` (assets/icons/ui/design/svg/model) : un pictogramme par fonction.
+- Onglets et panneaux de CathIA ; la boîte Assembler liste les types par groupe comme CathIA (tenons et
+  mortaises, mi-bois, queues d'aronde, chevilles et brêlage), explique ce que chaque assemblage bloque,
+  propose d'inverser les pièces et d'ajouter une cheville au mi-bois.
+- Ateliers Dessin technique et Nomenclature : fenêtres alimentées par `scout.atelier.*`.
+
 ## Reste à faire (par ordre d'utilité)
 
 1. **Boîte de dialogue « Nouveau meuble »** (type, dimensions, diamètres, position) : aujourd'hui le

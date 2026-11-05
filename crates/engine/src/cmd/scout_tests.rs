@@ -54,9 +54,9 @@ fn all_eleven_models_build_through_the_command() {
         let mut s = Session::default();
         let r = run(&mut s, "scout.meuble.create", json!({"type": m.id}));
         assert!(r["poles"].as_u64().unwrap_or(0) >= 5, "{} {r}", m.id);
-        let plan = run(&mut s, "scout.plan.meuble", json!({}));
+        let plan = run(&mut s, "scout.atelier.dessin", json!({}));
         assert_eq!(plan["type"], m.id);
-        assert!(plan["svg"].as_str().is_some_and(|x| x.contains("Liste de débit")), "{}", m.id);
+        assert!(plan["svg"].as_str().is_some_and(|x| x.contains("Nomenclature") && x.contains("Vue de face")), "{}", m.id);
         assert!(plan["steps"].as_array().is_some_and(|x| x.len() >= 3), "{}", m.id);
     }
 }
@@ -65,7 +65,7 @@ fn all_eleven_models_build_through_the_command() {
 fn a_model_takes_its_own_settings() {
     let mut s = Session::default();
     run(&mut s, "scout.meuble.create", json!({"type": "prepa", "long": 2000, "name": "Prépa"}));
-    let plan = run(&mut s, "scout.plan.meuble", json!({}));
+    let plan = run(&mut s, "scout.atelier.dessin", json!({}));
     assert!((plan["dimensions"]["length"].as_f64().unwrap_or(0.0) - 2000.0).abs() < 130.0, "{}", plan["dimensions"]);
     assert!(s.execute("scout.meuble.create", &json!({"type": "prepa", "long": "long"})).is_err());
 }
@@ -75,12 +75,12 @@ fn a_patrol_corner_holds_several_furniture_each_with_its_own_plan() {
     let mut s = Session::default();
     let r = run(&mut s, "scout.coin.create", json!({"name": "Coin des Lions"}));
     assert_eq!(r["meubles"].as_array().map(Vec::len), Some(5), "{r}");
-    let plan = run(&mut s, "scout.plan.coin", json!({}));
-    assert_eq!(plan["meubles"].as_array().map(Vec::len), Some(5));
-    assert!(plan["svg"].as_str().is_some_and(|x| x.contains("Coin des Lions")));
-    let one = run(&mut s, "scout.plan.meuble", json!({"meuble": "Étagère"}));
+    let plan = run(&mut s, "scout.atelier.dessin", json!({"coin": "Coin des Lions"}));
+    assert_eq!((plan["sujet"].as_str(), plan["meubles"].as_array().map(Vec::len)), (Some("coin"), Some(5)));
+    assert!(plan["svg"].as_str().is_some_and(|x| x.contains("Coin des Lions") && x.contains("Meubles du coin")));
+    let one = run(&mut s, "scout.atelier.dessin", json!({"meuble": "Étagère"}));
     assert_eq!(one["type"], "etagere");
-    assert!(s.execute("scout.plan.meuble", &json!({})).is_err());
+    assert!(s.execute("scout.atelier.dessin", &json!({})).is_err());
 }
 
 #[test]
@@ -170,8 +170,9 @@ fn bad_input_is_refused_not_panicked() {
         assert!(s.execute("scout.meuble.create", &p).is_err(), "{p}");
     }
     assert!(s.execute("scout.coin.create", &json!({"layout": "x"})).is_err());
-    assert!(s.execute("scout.plan.coin", &json!({})).is_err());
-    assert!(s.execute("scout.plan.meuble", &json!({"meuble": 99})).is_err());
+    assert!(s.execute("scout.atelier.dessin", &json!({})).is_err());
+    assert!(s.execute("scout.atelier.dessin", &json!({"meuble": 99})).is_err());
+    assert!(s.execute("scout.atelier.nomenclature", &json!({})).is_err());
     assert!(s.execute("scout.assemblage", &json!({"kind": "mibois", "a": "A", "b": "A"})).is_err());
     assert!(s.execute("scout.assemblage", &json!({"kind": "mibois"})).is_err());
     assert!(s.execute("scout.piece.traverse", &json!({"length": 1e12})).is_err());
@@ -185,4 +186,58 @@ fn the_registry_has_no_sheet_metal_left() {
     assert!(crate::cmd::is_retired("surface.loft"));
     assert!(crate::cmd::find_command("scout.meuble.create").is_some());
     assert!(crate::cmd::find_command("solid.extrude").is_some());
+}
+
+#[test]
+fn the_drawing_workshop_takes_its_views_scale_and_title_block() {
+    let mut s = Session::default();
+    run(&mut s, "scout.meuble.create", json!({"type": "banc", "name": "Banc du coin"}));
+    let r = run(
+        &mut s,
+        "scout.atelier.dessin",
+        json!({"format": "A4", "echelle": 20, "vues": ["face", "dessus"], "cotes": false, "tableau": false, "titre": "Mon plan", "dessinateur": "Lou", "societe": "FSGGB", "indice": "B"}),
+    );
+    let svg = r["svg"].as_str().unwrap_or_default();
+    assert_eq!(r["sheet"]["echelle"].as_f64(), Some(20.0), "{}", r["sheet"]);
+    assert!(svg.contains("Mon plan") && svg.contains("Lou") && svg.contains("FSGGB") && svg.contains("Ind. B"));
+    assert!(svg.contains("Vue de face") && svg.contains("Vue de dessus") && !svg.contains("Vue de droite") && !svg.contains("Nomenclature"));
+    assert!(r["prims"].as_array().is_some_and(|a| a.len() > 20));
+    for bad in [json!({"format": "A0"}), json!({"vues": ["face", "zzz"]}), json!({"vues": []}), json!({"echelle": -3}), json!({"path": "x.txt"})] {
+        assert!(s.execute("scout.atelier.dessin", &bad).is_err(), "{bad}");
+    }
+}
+
+#[test]
+fn the_nomenclature_has_its_three_tables_and_a_csv() {
+    let mut s = Session::default();
+    run(&mut s, "scout.coin.create", json!({}));
+    let all = run(&mut s, "scout.atelier.nomenclature", json!({}));
+    assert!(all["pieces"].as_array().is_some_and(|a| a.len() > 10), "{}", all["poles"]);
+    let one = run(&mut s, "scout.atelier.nomenclature", json!({"meuble": "Étagère"}));
+    assert!(one["poles"].as_u64().unwrap_or(0) < all["poles"].as_u64().unwrap_or(0));
+    assert!(one["csv"].as_str().is_some_and(|c| c.contains("LISTE DE MATÉRIEL")));
+    assert!(s.execute("scout.atelier.nomenclature", &json!({"path": "x.txt"})).is_err());
+}
+
+#[test]
+fn a_profile_of_metal_is_made_in_each_shape() {
+    for kind in ["tube_rond", "tube_carre", "corniere", "u", "i"] {
+        let mut s = Session::default();
+        let r = run(&mut s, "scout.profil", json!({"kind": kind, "size": 40, "epaisseur": 3, "length": 500, "dir": "Y"}));
+        assert!(r["name"].as_str().is_some(), "{kind}");
+        let size = size_of(&s, r["name"].as_str().unwrap_or(""));
+        assert!((size[1] - 500.0).abs() < 1.0, "{kind} {size:?}");
+    }
+    let mut s = Session::default();
+    assert!(s.execute("scout.profil", &json!({"kind": "zzz"})).is_err());
+    assert!(s.execute("scout.profil", &json!({"size": 10, "epaisseur": 6})).is_err());
+}
+
+#[test]
+fn a_half_lap_can_be_pegged_in_the_same_step() {
+    let mut s = Session::default();
+    run(&mut s, "scout.piece.traverse", json!({"name": "A", "diameter": 80, "length": 1000, "at": [0, 0, 40]}));
+    run(&mut s, "scout.piece.traverse", json!({"name": "B", "diameter": 80, "length": 1000, "at": [500, -500, 110], "dir": [0, 1, 0]}));
+    let r = run(&mut s, "scout.assemblage.mibois", json!({"a": "A", "b": "B", "chev": true, "d": 20}));
+    assert_eq!(r["created"].as_array().map(Vec::len), Some(1), "{r}");
 }

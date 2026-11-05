@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Chevilles</title>
+  <path d="M4 34L60 34L60 46L4 46Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M24 10L40 10L40 56L24 56Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M31.5 4L32.5 4A2.5 2.5 0 0 1 35 6.5L35 55.5A2.5 2.5 0 0 1 32.5 58L31.5 58A2.5 2.5 0 0 1 29 55.5L29 6.5A2.5 2.5 0 0 1 31.5 4Z" fill="#328bd3" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M28 2L36 2A2 2 0 0 1 38 4L38 5A2 2 0 0 1 36 7L28 7A2 2 0 0 1 26 5L26 4A2 2 0 0 1 28 2Z" fill="#b9ddf8" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

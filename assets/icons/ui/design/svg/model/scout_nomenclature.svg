@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Nomenclature</title>
+  <path d="M9 8L55 8A3 3 0 0 1 58 11L58 53A3 3 0 0 1 55 56L9 56A3 3 0 0 1 6 53L6 11A3 3 0 0 1 9 8Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M8.5 8L55.5 8A2.5 2.5 0 0 1 58 10.5L58 17.5A2.5 2.5 0 0 1 55.5 20L8.5 20A2.5 2.5 0 0 1 6 17.5L6 10.5A2.5 2.5 0 0 1 8.5 8Z" fill="#b9ddf8" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M6 29L58 29" fill="none" stroke="#34465b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M6 38L58 38" fill="none" stroke="#34465b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M6 47L58 47" fill="none" stroke="#34465b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M20 8L20 56" fill="none" stroke="#34465b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M40 8L40 56" fill="none" stroke="#34465b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

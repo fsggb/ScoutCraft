@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Pointe</title>
+  <path d="M6 22L36 22L58 32L36 42L6 42Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M36 22L58 32L36 42Z" fill="#b9ddf8" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M36 22L36 42" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

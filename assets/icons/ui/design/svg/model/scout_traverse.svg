@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Traverse</title>
+  <path d="M8 17L52 17A3.42 9 0 0 1 52 35L8 35A3.42 9 0 0 1 8 17Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M52 17A3.42 9 0 0 0 52 35A3.42 9 0 0 0 52 17Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M8 47L8 55" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M55 47L55 55" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M10 51L53 51" fill="none" stroke="#236ead" stroke-width="3.45" stroke-linejoin="round" stroke-linecap="round"/><path d="M46.86 54.36L53 51L46.86 47.64" fill="none" stroke="#236ead" stroke-width="3.45" stroke-linejoin="round" stroke-linecap="round"/>
+  
+</svg>

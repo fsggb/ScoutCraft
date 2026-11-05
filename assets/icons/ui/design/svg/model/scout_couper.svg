@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Couper</title>
+  <path d="M4 22L25 22A3.8 10 0 0 1 25 42L4 42A3.8 10 0 0 1 4 22Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M25 22A3.8 10 0 0 0 25 42A3.8 10 0 0 0 25 22Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M37 22L60 22A3.8 10 0 0 1 60 42L37 42A3.8 10 0 0 1 37 22Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M60 22A3.8 10 0 0 0 60 42A3.8 10 0 0 0 60 22Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M31 16L28 22L34 26L28 32L34 38L28 44L31 48" fill="none" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

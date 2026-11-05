@@ -8,7 +8,8 @@
 //!   pegs, lashing); `scout.faconner` splits, cuts and sharpens one; `scout.piece.*` add a pole, a
 //!   set square, a deck of claies or a net.
 //! - `scout.coin.create` makes a patrol corner, a component holding several furniture on the ground;
-//!   `scout.plan.meuble`, `scout.plan.coin` and `scout.export.html` draw the plans and list what to
+//!   `scout.atelier.dessin` (the technical drawing), `scout.atelier.nomenclature` and
+//!   `scout.export.html` draw the plans and list what to
 //!   cut, join and build.
 //!
 //! Every change is one undo step and every pole's record is saved in its component's properties
@@ -19,7 +20,9 @@ use serde_json::{Value, json};
 use super::CommandSpec;
 use crate::params::{bad, num, str_, vec2, vec3};
 use crate::scout::models::{self, MODELS, Params};
-use crate::scout::plan::{Placed, coin_svg, meuble_section, meuble_svg, page_html, steps};
+use crate::scout::dessin::{self, Cartouche, Format, Placed, SheetCfg, View};
+use crate::scout::nomenclature;
+use crate::scout::plan::{meuble_section, page_html, steps};
 use crate::scout::pole::{self, Build, End, MAX_POLES, Op, Pole, SplitMode, Style, TenonOpts, V3, cut_list, extent, joint_summary, wood_metres};
 use crate::{EngineError, Result, Session};
 
@@ -35,11 +38,11 @@ pub static COMMANDS: &[CommandSpec] = &[
     ),
     CommandSpec::new("scout.meuble.create", "Nouveau meuble", |s, p| atomic(s, |c| create_meuble(c, p)))
         .at("SCOUT", "MEUBLE")
-        .icon("component")
+        .icon("scout_meuble")
         .params("type: etabli|banc|fauteuil|bancdos|bancdiag|table|prepa|cuisine|etagere|vaisselier|feu; name?; the model's own settings by key (scout.meuble.types), at top level or in params: {…}; coin?: patrol corner (id or name); at?: [x, y] mm; rotation?: 0|90|180|270 → component, occurrence, name, type, poles, wood_m, cut_list, joints"),
     CommandSpec::new("scout.coin.create", "Nouveau coin de patrouille", |s, p| atomic(s, |c| create_coin(c, p)))
         .at("SCOUT", "COIN")
-        .icon("component")
+        .icon("scout_coin")
         .params("name?; layout?: standard (a table, two benches, a shelving and a prep table) | empty → component, meubles"),
     CommandSpec::new("scout.assemblage", "Assemblage", |s, p| atomic(s, |c| assemblage(c, p)))
         .icon("joint")
@@ -48,46 +51,54 @@ pub static COMMANDS: &[CommandSpec] = &[
         .icon("scale")
         .params("kind: demi|quart|couper|pointe; piece: component name or id; length?: new length mm (couper, from the start); len?: length of the point mm; end?: start|end (pointe, default end)"),
     // The ribbon's buttons: each opens its dialog on the right kind and runs the same command.
-    CommandSpec::new("scout.assemblage.mibois", "Mi-bois", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "mibois")))).icon("joint").params("a, b; pc? (see scout.assemblage)"),
-    CommandSpec::new("scout.assemblage.tenon", "Tenon et mortaise", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "hache")))).icon("joint").params("a, b; kind? hache|scie|plat|platscie; through?, d?, w? (see scout.assemblage)"),
-    CommandSpec::new("scout.assemblage.aronde", "Queue d’aronde", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "aronde1")))).icon("joint").params("a, b; kind? aronde1|aronde2|aronde3; theta? (see scout.assemblage)"),
-    CommandSpec::new("scout.assemblage.cheville", "Chevilles", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "cheville")))).icon("fastener").params("a, b; d? (see scout.assemblage)"),
-    CommandSpec::new("scout.assemblage.brelage", "Brêlage", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "brelage")))).icon("joint").params("a, b; turns?, rope? (see scout.assemblage)"),
-    CommandSpec::new("scout.faconner.demi", "Fendre", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "demi")))).icon("scale").params("piece (see scout.faconner)"),
-    CommandSpec::new("scout.faconner.quart", "Quart de bois", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "quart")))).icon("scale").params("piece (see scout.faconner)"),
-    CommandSpec::new("scout.faconner.couper", "Couper", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "couper")))).icon("scale").params("piece, length (see scout.faconner)"),
-    CommandSpec::new("scout.faconner.pointe", "Pointe", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "pointe")))).icon("scale").params("piece, len?, end? (see scout.faconner)"),
+    CommandSpec::new("scout.assemblage.mibois", "Mi-bois", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "mibois")))).icon("scout_mibois").params("a, b; pc? (see scout.assemblage)"),
+    CommandSpec::new("scout.assemblage.tenon", "Tenon et mortaise", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "hache")))).icon("scout_tenon").params("a, b; kind? hache|scie|plat|platscie; through?, d?, w? (see scout.assemblage)"),
+    CommandSpec::new("scout.assemblage.aronde", "Queue d’aronde", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "aronde1")))).icon("scout_aronde").params("a, b; kind? aronde1|aronde2|aronde3; theta? (see scout.assemblage)"),
+    CommandSpec::new("scout.assemblage.cheville", "Chevilles", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "cheville")))).icon("scout_cheville").params("a, b; d? (see scout.assemblage)"),
+    CommandSpec::new("scout.assemblage.brelage", "Brêlage", |s, p| atomic(s, |c| assemblage(c, &with_kind(p, "brelage")))).icon("scout_brelage").params("a, b; turns?, rope? (see scout.assemblage)"),
+    CommandSpec::new("scout.faconner.demi", "Fendre", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "demi")))).icon("scout_fendre").params("piece (see scout.faconner)"),
+    CommandSpec::new("scout.faconner.quart", "Quart de bois", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "quart")))).icon("scout_quart").params("piece (see scout.faconner)"),
+    CommandSpec::new("scout.faconner.couper", "Couper", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "couper")))).icon("scout_couper").params("piece, length (see scout.faconner)"),
+    CommandSpec::new("scout.faconner.pointe", "Pointe", |s, p| atomic(s, |c| faconner(c, &with_kind(p, "pointe")))).icon("scout_pointe").params("piece, len?, end? (see scout.faconner)"),
     CommandSpec::new("scout.piece.traverse", "Traverse", |s, p| atomic(s, |c| piece_traverse(c, p)))
         .at("SCOUT", "PIÈCES")
-        .icon("cylinder")
+        .icon("scout_traverse")
         .params("diameter?: mm (default 80); length?: mm (default 1500); at?: [x, y, z] start point mm; dir?: [x, y, z] direction (default along x); name? → component, name"),
     CommandSpec::new("scout.piece.equerre", "Équerre", |s, p| atomic(s, |c| piece_equerre(c, p)))
         .at("SCOUT", "PIÈCES")
-        .icon("angle")
+        .icon("scout_equerre")
         .params("unit?: mm for the 3-4-5 (default 300: poles of 0.9, 1.2 and 1.5 m); d?: pole Ø mm (default 50); at?: [x, y]"),
     CommandSpec::new("scout.piece.claies", "Plateau de claies", |s, p| atomic(s, |c| piece_claies(c, p)))
         .at("SCOUT", "PIÈCES")
-        .icon("pattern")
+        .icon("scout_claies")
         .params("long?, larg?: mm (default 1000 × 600); dc?: claie Ø mm (default 20); z?: height of the bottom mm; at?: [x, y]"),
     CommandSpec::new("scout.piece.filet", "Filet de ficelle", |s, p| atomic(s, |c| piece_filet(c, p)))
         .at("SCOUT", "PIÈCES")
-        .icon("pattern")
+        .icon("scout_filet")
         .params("long?, larg?: mm (default 1000 × 600); maille?: mm (default 30); z?: height mm; at?: [x, y]"),
-    CommandSpec::new("scout.plan.meuble", "Plan du meuble", plan_meuble)
-        .at("SCOUT", "PLANS")
-        .icon("export")
+    CommandSpec::new("scout.profil.tube_rond", "Tube rond", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "tube_rond")))).icon("cylinder").params("see scout.profil"),
+    CommandSpec::new("scout.profil.tube_carre", "Tube carré", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "tube_carre")))).icon("box").params("see scout.profil"),
+    CommandSpec::new("scout.profil.corniere", "Cornière", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "corniere")))).icon("box").params("see scout.profil"),
+    CommandSpec::new("scout.profil.u", "Profilé en U", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "u")))).icon("box").params("see scout.profil"),
+    CommandSpec::new("scout.profil.i", "Poutre en I", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "i")))).icon("box").params("see scout.profil"),
+    CommandSpec::new("scout.profil", "Profilé", |s, p| atomic(s, |c| piece_profil(c, p)))
+        .icon("box")
+        .params("kind?: tube_rond|tube_carre|corniere|u|i (default tube_carre); size?: mm (default 40); epaisseur?: wall mm (default 3); length?: mm (default 1000); at?: [x, y, z]; dir?: X|Y|Z or [x, y, z]; name? → component, name"),
+    CommandSpec::new("scout.atelier.dessin", "Dessin technique", dessin_cmd)
+        .at("PLANS", "FEUILLE")
+        .icon("scout_plan")
         .noundo()
         .doc_only()
-        .params("meuble?: id or name (default the only furniture of the design); path?: write the plan as a .svg file; author? → svg, dimensions, cut_list, joints, steps, wood_m"),
-    CommandSpec::new("scout.plan.coin", "Plan du coin de patrouille", plan_coin)
-        .at("SCOUT", "PLANS")
-        .icon("export")
+        .params("meuble?|coin?: id or name (default the only furniture, else the only corner); format?: A3|A4; echelle?: n for 1:n (0 = automatic); vues?: [face, arriere, droite, gauche, dessus, dessous, iso]; cotes?: bool (overall dimensions); cotes_pieces?: bool; tableau?: bool; titre?, societe?, dessinateur?, date?, materiau?, reference?, indice?: the title block; path?: write a .svg → name, sujet (meuble|coin), svg, sheet: {w, h, echelle}, prims"),
+    CommandSpec::new("scout.atelier.nomenclature", "Nomenclature", nomenclature_cmd)
+        .at("NOMENCLATURE", "TABLEAUX")
+        .icon("scout_nomenclature")
         .noundo()
         .doc_only()
-        .params("coin?: id or name (default the only corner); path?: write the overview as a .svg file; author?; meuble_paths?: folder where every furniture's own plan is written too → svg, meubles, wood_m, plans?"),
+        .params("meuble?|coin?: id or name (default the whole design); path?: write the three tables as a .csv → pieces, assemblages, materiel, csv"),
     CommandSpec::new("scout.export.html", "Exporter en HTML", export_html)
-        .at("SCOUT", "PLANS")
-        .icon("export")
+        .at("PLANS", "EXPORTER")
+        .icon("scout_html")
         .noundo()
         .doc_only()
         .params("path?: write a .html file (self-contained, no scripts, prints on A3); author?; title? → html, meubles (count), coins (count)"),
@@ -460,7 +471,9 @@ fn assemblage(s: &mut Session, p: &Value) -> Result<Value> {
     let mut build = Build { poles: vec![a, b] };
     let d = num(p, "d").unwrap_or(0.0);
     let result = match kind {
-        "mibois" => build.mibois(0, 1, num(p, "pc").unwrap_or(50.0)),
+        "mibois" => build.mibois(0, 1, num(p, "pc").unwrap_or(50.0)).and_then(|()| {
+            if p.get("chev").and_then(Value::as_bool).unwrap_or(false) { build.peg(0, 1, if d > 0.0 { d } else { 20.0 }).map(|_| ()) } else { Ok(()) }
+        }),
         "cheville" => build.peg(0, 1, if d > 0.0 { d } else { 20.0 }).map(|_| ()),
         "brelage" => build.lash(0, 1, num(p, "turns").unwrap_or(6.0), num(p, "rope").unwrap_or(6.0)),
         other => match style_of(other) {
@@ -683,26 +696,6 @@ fn model_name(kind: &str) -> String {
     models::model(kind).map_or(kind.to_string(), |m| m.name.to_string())
 }
 
-fn meuble_result(m: &Meuble, svg: &str) -> Value {
-    let x = extent(&m.poles);
-    json!({
-        "meuble": m.id, "name": m.name, "type": m.kind, "svg": svg,
-        "dimensions": {"length": x[0], "width": x[1], "height": x[2]},
-        "wood_m": wood_metres(&m.poles), "cut_list": rows_json(&m.poles), "joints": joints_json(&m.poles), "steps": steps(&m.poles),
-    })
-}
-
-fn plan_meuble(s: &mut Session, p: &Value) -> Result<Value> {
-    let cmd = "scout.plan.meuble";
-    let id = pick(s, p, "meuble", P_KIND, "furniture", cmd)?;
-    let m = read_meuble(s, id).ok_or_else(|| bad(cmd, "this furniture's record is unreadable"))?;
-    let svg = meuble_svg(&m.name, &model_name(&m.kind), &author(s, p), &m.poles);
-    if let Some(path) = str_(p, "path") {
-        write_text(path, ".svg", &svg)?;
-    }
-    Ok(meuble_result(&m, &svg))
-}
-
 fn placed_of(m: &Meuble) -> Placed {
     let x = extent(&m.poles);
     Placed { name: m.name.clone(), kind: model_name(&m.kind), x: m.place.0, y: m.place.1, length: x[0], width: x[1], rotation: m.place.2, wood_m: wood_metres(&m.poles) }
@@ -712,34 +705,191 @@ fn coin_meubles(s: &Session, coin: u64) -> Vec<Meuble> {
     s.doc.components.iter().filter(|c| c.parent == coin && c.properties.contains_key(P_KIND)).map(|c| c.id).collect::<Vec<_>>().into_iter().filter_map(|id| read_meuble(s, id)).collect()
 }
 
-fn plan_coin(s: &mut Session, p: &Value) -> Result<Value> {
-    let cmd = "scout.plan.coin";
-    let coin = pick(s, p, "coin", P_COIN, "patrol corner", cmd)?;
-    let coin_name = name_of(s, coin);
-    let meubles = coin_meubles(s, coin);
-    let who = author(s, p);
-    let placed: Vec<Placed> = meubles.iter().map(placed_of).collect();
-    let svg = coin_svg(&coin_name, &who, &placed);
+fn bool_p(p: &Value, k: &str, default: bool) -> bool {
+    p.get(k).and_then(Value::as_bool).unwrap_or(default)
+}
+
+fn text_p(p: &Value, k: &str) -> String {
+    str_(p, k).map(|x| x.trim().chars().take(120).collect()).unwrap_or_default()
+}
+
+fn sheet_cfg(s: &Session, p: &Value, titre: &str) -> Result<SheetCfg> {
+    let cmd = "scout.atelier.dessin";
+    let mut cfg = SheetCfg::standard(titre, &author(s, p));
+    cfg.format = match str_(p, "format") {
+        None | Some("A3") => Format::A3,
+        Some("A4") => Format::A4,
+        Some(_) => return Err(bad(cmd, "`format` is A3 or A4")),
+    };
+    cfg.echelle = bounded(cmd, p, "echelle", 0.0, 0.0, 1000.0)?;
+    if let Some(list) = p.get("vues").filter(|v| !v.is_null()) {
+        let arr = list.as_array().ok_or_else(|| bad(cmd, "`vues` is a list: face, arriere, droite, gauche, dessus, dessous, iso"))?;
+        let views: Vec<View> = arr.iter().filter_map(|v| v.as_str().and_then(View::parse)).collect();
+        if views.len() != arr.len() || views.is_empty() || views.len() > 7 {
+            return Err(bad(cmd, "`vues`: one to seven of face, arriere, droite, gauche, dessus, dessous, iso"));
+        }
+        cfg.vues = views;
+    }
+    cfg.cotes_ensemble = bool_p(p, "cotes", true);
+    cfg.cotes_pieces = bool_p(p, "cotes_pieces", false);
+    cfg.tableau = bool_p(p, "tableau", true);
+    let c = &mut cfg.cartouche;
+    *c = Cartouche {
+        titre: if text_p(p, "titre").is_empty() { titre.to_string() } else { text_p(p, "titre") },
+        societe: text_p(p, "societe"),
+        dessinateur: if text_p(p, "dessinateur").is_empty() { c.dessinateur.clone() } else { text_p(p, "dessinateur") },
+        date: text_p(p, "date"),
+        materiau: if str_(p, "materiau").is_some() { text_p(p, "materiau") } else { c.materiau.clone() },
+        reference: text_p(p, "reference"),
+        indice: text_p(p, "indice"),
+    };
+    Ok(cfg)
+}
+
+fn dessin_cmd(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.atelier.dessin";
+    let has = |prop: &str| s.doc.components.iter().filter(|c| c.properties.contains_key(prop)).count();
+    let coin_wanted = p.get("coin").is_some_and(|v| !v.is_null()) || (p.get("meuble").is_none_or(Value::is_null) && has(P_KIND) == 0 && has(P_COIN) == 1);
+    if coin_wanted {
+        let coin = pick(s, p, "coin", P_COIN, "patrol corner", cmd)?;
+        let name = name_of(s, coin);
+        let placed: Vec<Placed> = coin_meubles(s, coin).iter().map(placed_of).collect();
+        let cfg = sheet_cfg(s, p, &name)?;
+        let sheet = dessin::sheet_coin(&placed, &cfg, (1, 1 + placed.len()));
+        let svg = dessin::svg(&sheet);
+        if let Some(path) = str_(p, "path") {
+            write_text(path, ".svg", &svg)?;
+        }
+        return Ok(json!({"name": name, "sujet": "coin", "svg": svg, "sheet": {"w": sheet.w, "h": sheet.h, "echelle": sheet.den}, "prims": sheet.prims, "meubles": placed.iter().map(|x| x.name.clone()).collect::<Vec<_>>()}));
+    }
+    let id = pick(s, p, "meuble", P_KIND, "furniture", cmd)?;
+    let m = read_meuble(s, id).ok_or_else(|| bad(cmd, "this furniture's record is unreadable"))?;
+    let mut cfg = sheet_cfg(s, p, &m.name)?;
+    if cfg.cartouche.reference.is_empty() {
+        cfg.cartouche.reference = model_name(&m.kind);
+    }
+    let sheet = dessin::sheet(&m.poles, &cfg, (1, 1));
+    let svg = dessin::svg(&sheet);
     if let Some(path) = str_(p, "path") {
         write_text(path, ".svg", &svg)?;
     }
-    let mut plans = Vec::new();
-    if let Some(dir) = str_(p, "meuble_paths") {
-        for m in &meubles {
-            let file = format!("{}/{}.svg", dir.trim_end_matches('/'), m.name.replace(['/', '\\'], "-"));
-            write_text(&file, ".svg", &meuble_svg(&m.name, &model_name(&m.kind), &who, &m.poles))?;
-            plans.push(json!(file));
+    let x = extent(&m.poles);
+    Ok(json!({
+        "meuble": m.id, "name": m.name, "type": m.kind, "sujet": "meuble", "svg": svg,
+        "sheet": {"w": sheet.w, "h": sheet.h, "echelle": sheet.den}, "prims": sheet.prims,
+        "dimensions": {"length": x[0], "width": x[1], "height": x[2]},
+        "wood_m": wood_metres(&m.poles), "cut_list": rows_json(&m.poles), "joints": joints_json(&m.poles), "steps": steps(&m.poles),
+    }))
+}
+
+fn all_poles(s: &Session, root: Option<u64>) -> Vec<Pole> {
+    let under = |mut c: u64, root: u64| loop {
+        if c == root {
+            return true;
+        }
+        match s.doc.components.iter().find(|k| k.id == c) {
+            Some(k) if k.parent != c => c = k.parent,
+            _ => return false,
+        }
+    };
+    s.doc.components.iter().filter(|c| root.is_none_or(|r| under(c.id, r))).filter_map(|c| c.properties.get(P_POLE)).filter_map(|t| serde_json::from_str(t).ok()).collect()
+}
+
+fn nomenclature_cmd(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.atelier.nomenclature";
+    let root = if p.get("coin").is_some_and(|v| !v.is_null()) {
+        Some(pick(s, p, "coin", P_COIN, "patrol corner", cmd)?)
+    } else if p.get("meuble").is_some_and(|v| !v.is_null()) {
+        Some(pick(s, p, "meuble", P_KIND, "furniture", cmd)?)
+    } else {
+        None
+    };
+    let poles = all_poles(s, root);
+    if poles.is_empty() {
+        return Err(bad(cmd, "the design has no pieces yet (Créer tab)"));
+    }
+    let n = nomenclature::of(&poles);
+    let csv = nomenclature::csv(&n);
+    if let Some(path) = str_(p, "path") {
+        write_text(path, ".csv", &csv)?;
+    }
+    Ok(json!({"pieces": n.pieces, "assemblages": n.assemblages, "materiel": n.materiel, "csv": csv, "poles": poles.len()}))
+}
+
+fn piece_profil(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.profil";
+    let kind = str_(p, "kind").unwrap_or("tube_carre");
+    let size = bounded(cmd, p, "size", 40.0, 10.0, 300.0)?;
+    let t = bounded(cmd, p, "epaisseur", 3.0, 0.5, 40.0)?;
+    if 2.0 * t >= size {
+        return Err(bad(cmd, "`epaisseur` is too thick for `size`"));
+    }
+    let l = bounded(cmd, p, "length", 1000.0, 20.0, 6000.0)?;
+    let dir = match p.get("dir") {
+        None | Some(Value::Null) => [1.0, 0.0, 0.0],
+        Some(Value::String(a)) => match a.as_str() {
+            "X" => [1.0, 0.0, 0.0],
+            "Y" => [0.0, 1.0, 0.0],
+            "Z" => [0.0, 0.0, 1.0],
+            _ => return Err(bad(cmd, "`dir` is X, Y, Z or [x, y, z]")),
+        },
+        Some(v) => vec3(v).map(|q| [q.x, q.y, q.z]).filter(|q| pole::len(*q) > 1e-6).ok_or_else(|| bad(cmd, "`dir` is X, Y, Z or [x, y, z], not zero"))?,
+    };
+    let at = at_of(cmd, p)?.unwrap_or([0.0, 0.0, size / 2.0]);
+    let label = match kind {
+        "tube_rond" => "Tube rond",
+        "tube_carre" => "Tube carré",
+        "corniere" => "Cornière",
+        "u" => "Profilé en U",
+        "i" => "Poutre en I",
+        _ => return Err(bad(cmd, "`kind` is tube_rond, tube_carre, corniere, u or i")),
+    };
+    let name = free_name(s, str_(p, "name").map(str::trim).filter(|n| !n.is_empty()).unwrap_or(label));
+    let active = s.active_component;
+    let c = run(s, "component.create", json!({"name": name, "parent": 0, "grounded": false}))?;
+    let (comp, occ) = (id_of(&c, "component"), id_of(&c, "occurrence"));
+    let h = size / 2.0;
+    let target = json!([name.clone()]);
+    let bx = |s: &mut Session, corner: V3, sz: V3, op: &str| -> Result<()> {
+        let mut q = json!({"corner": corner, "length": sz[0], "width": sz[1], "height": sz[2]});
+        if op == "new" {
+            q["body_name"] = json!(name);
+        } else {
+            q["operation"] = json!(op);
+            q["targets"] = target.clone();
+        }
+        run(s, "solid.box", q)?;
+        Ok(())
+    };
+    match kind {
+        "tube_rond" => {
+            run(s, "solid.cylinder", json!({"base": [0.0, 0.0, 0.0], "axis": [0.0, 0.0, 1.0], "diameter": size, "height": l, "body_name": name}))?;
+            run(s, "solid.cylinder", json!({"base": [0.0, 0.0, -1.0], "axis": [0.0, 0.0, 1.0], "diameter": size - 2.0 * t, "height": l + 2.0, "operation": "cut", "targets": target}))?;
+        }
+        "tube_carre" => {
+            bx(s, [-h, -h, 0.0], [size, size, l], "new")?;
+            bx(s, [-h + t, -h + t, -1.0], [size - 2.0 * t, size - 2.0 * t, l + 2.0], "cut")?;
+        }
+        "corniere" => {
+            bx(s, [-h, -h, 0.0], [size, t, l], "new")?;
+            bx(s, [-h, -h, 0.0], [t, size, l], "join")?;
+        }
+        "u" => {
+            bx(s, [-h, -h, 0.0], [size, t, l], "new")?;
+            bx(s, [-h, -h, 0.0], [t, size, l], "join")?;
+            bx(s, [h - t, -h, 0.0], [t, size, l], "join")?;
+        }
+        _ => {
+            bx(s, [-h, -h, 0.0], [size, t, l], "new")?;
+            bx(s, [-h, h - t, 0.0], [size, t, l], "join")?;
+            bx(s, [-t / 2.0, -h, 0.0], [t, size, l], "join")?;
         }
     }
-    let total: f64 = meubles.iter().map(|m| wood_metres(&m.poles)).sum();
-    let mut out = json!({
-        "coin": coin, "name": coin_name, "svg": svg, "wood_m": total,
-        "meubles": placed.iter().zip(&meubles).map(|(pl, m)| json!({"meuble": m.id, "name": pl.name, "type": m.kind, "at": [pl.x, pl.y], "rotation": pl.rotation, "length": pl.length, "width": pl.width, "wood_m": pl.wood_m})).collect::<Vec<_>>(),
-    });
-    if !plans.is_empty() {
-        out["plans"] = Value::Array(plans);
-    }
-    Ok(out)
+    let pole = Pole::bar("profilé", size, at, pole::add(at, pole::mul(pole::norm(dir), l)));
+    run(s, "occurrence.move", json!({"occurrence": occ, "matrix": pole.matrix(), "capture": true, "move_grounded": true}))?;
+    run(s, "component.metadata.set", json!({"component": comp, "part_number": format!("PROFIL-{}-{}x{}", kind.to_uppercase(), size, l), "description": format!("{label} {size} × {l} mm, paroi {t}"), "properties": {"essence": "métal"}}))?;
+    run(s, "component.activate", json!({"component": active}))?;
+    Ok(json!({"component": comp, "name": name}))
 }
 
 fn export_html(s: &mut Session, p: &Value) -> Result<Value> {
@@ -752,7 +902,7 @@ fn export_html(s: &mut Session, p: &Value) -> Result<Value> {
         let ms = coin_meubles(s, coin);
         let placed: Vec<Placed> = ms.iter().map(placed_of).collect();
         let esc = name.replace('&', "&amp;").replace('<', "&lt;");
-        sections.push(format!("<section class=\"meuble\"><h2>{esc}</h2><p class=\"sub\">Coin de patrouille · {} meubles</p>{}</section>\n", ms.len(), coin_svg(&name, &who, &placed)));
+        sections.push(format!("<section class=\"meuble\"><h2>{esc}</h2><p class=\"sub\">Coin de patrouille · {} meubles</p>{}</section>\n", ms.len(), dessin::svg(&dessin::sheet_coin(&placed, &SheetCfg::standard(&name, &who), (1, 1)))));
         for m in &ms {
             sections.push(meuble_section(&m.name, &model_name(&m.kind), &who, &m.poles));
             count += 1;

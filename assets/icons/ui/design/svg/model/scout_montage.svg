@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Montage</title>
+  <path d="M4 10L26 10A2.28 6 0 0 1 26 22L4 22A2.28 6 0 0 1 4 10Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M26 10A2.28 6 0 0 0 26 22A2.28 6 0 0 0 26 10Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M4 26L26 26A2.28 6 0 0 1 26 38L4 38A2.28 6 0 0 1 4 26Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M26 26A2.28 6 0 0 0 26 38A2.28 6 0 0 0 26 26Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M4 42L26 42A2.28 6 0 0 1 26 54L4 54A2.28 6 0 0 1 4 42Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/><path d="M26 42A2.28 6 0 0 0 26 54A2.28 6 0 0 0 26 42Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M30 16L40 16" fill="none" stroke="#6f879c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="2 3"/>
+  <path d="M30 32L40 32" fill="none" stroke="#6f879c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="2 3"/>
+  <path d="M30 48L40 48" fill="none" stroke="#6f879c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="2 3"/>
+  
+  <path d="M34 32L60 32" fill="none" stroke="#236ead" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M53.86 35.36L60 32L53.86 28.64" fill="none" stroke="#236ead" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

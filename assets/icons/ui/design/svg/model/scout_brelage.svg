@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Brêlage</title>
+  <path d="M4 28L60 28L60 42L4 42Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M26 4L40 4L40 60L26 60Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M26 28L40 28L40 42L26 42Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M22 22L30 48" fill="none" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M29 22L37 48" fill="none" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M36 22L44 48" fill="none" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M42 22L34 48" fill="none" stroke="#236ead" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M35 22L27 48" fill="none" stroke="#236ead" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M28 22L20 48" fill="none" stroke="#236ead" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

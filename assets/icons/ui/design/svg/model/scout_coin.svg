@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Coin de patrouille</title>
+  <path d="M11 8L53 8A6 6 0 0 1 59 14L59 50A6 6 0 0 1 53 56L11 56A6 6 0 0 1 5 50L5 14A6 6 0 0 1 11 8Z" fill="none" stroke="#6f879c" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4 3.5"/>
+  <path d="M20 22L44 22A2 2 0 0 1 46 24L46 34A2 2 0 0 1 44 36L20 36A2 2 0 0 1 18 34L18 24A2 2 0 0 1 20 22Z" fill="#b9ddf8" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M20 10L44 10A2 2 0 0 1 46 12L46 16A2 2 0 0 1 44 18L20 18A2 2 0 0 1 18 16L18 12A2 2 0 0 1 20 10Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M20 41L44 41A2 2 0 0 1 46 43L46 47A2 2 0 0 1 44 49L20 49A2 2 0 0 1 18 47L18 43A2 2 0 0 1 20 41Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M10 22L12 22A2 2 0 0 1 14 24L14 34A2 2 0 0 1 12 36L10 36A2 2 0 0 1 8 34L8 24A2 2 0 0 1 10 22Z" fill="#8e9faf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M32 26L32 32" fill="none" stroke="#236ead" stroke-width="4.25" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

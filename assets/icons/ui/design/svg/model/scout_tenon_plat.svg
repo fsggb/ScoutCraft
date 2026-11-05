@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Tenon plat</title>
+  <path d="M42 6L56 6A4 4 0 0 1 60 10L60 54A4 4 0 0 1 56 58L42 58A4 4 0 0 1 38 54L38 10A4 4 0 0 1 42 6Z" fill="#b8c3cf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M43.55 18L54.45 18A2.55 2.55 0 0 1 57 20.55L57 43.45A2.55 2.55 0 0 1 54.45 46L43.55 46A2.55 2.55 0 0 1 41 43.45L41 20.55A2.55 2.55 0 0 1 43.55 18Z" fill="#8e9faf" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M7 22L27 22A3 3 0 0 1 30 25L30 39A3 3 0 0 1 27 42L7 42A3 3 0 0 1 4 39L4 25A3 3 0 0 1 7 22Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M30 25L52 25L52 39L30 39Z" fill="#328bd3" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M30 22L30 42" fill="none" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

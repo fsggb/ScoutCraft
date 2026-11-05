@@ -187,7 +187,7 @@ fn swap_in(app: &mut SolveApp, mut slot: DocSlot) -> DocSlot {
         pending.view_changed(before, app.session.revision);
     }
     app.ui.ribbon_context = None;
-    app.ui.tab = "SCOUT".into();
+    app.ui.tab = "CRÉER".into();
     crate::workspace::sync_context(app);
     out
 }

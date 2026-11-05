@@ -17,29 +17,26 @@ historique paramétrique, assemblages, nomenclature) **allégé à l'extrême** 
 tôlerie, au plastique, aux surfaces, aux maillages, à l'animation mécanique, au rendu ou à l'usinage
 a été retiré.
 
-## Ce qu'on garde de SolidCraft
+## Les ateliers (comme CathIA)
 
-- **Historique et arborescence** : frise chronologique des opérations (marqueur de retour en arrière,
-  suppression, réordonnancement), points de contrôle (`edit.checkpoint` / `edit.restore_checkpoint`),
-  annuler / rétablir.
-- Esquisses contraintes et cotées, extrusion, révolution, trous, congés, chanfreins, symétrie, répétitions.
-- **Assemblages** : composants, liaisons, vue éclatée (le montage), contrôle d'interférences.
-- **Nomenclature** (`assembly.bom`), propriétés des pièces, paramètres nommés, unités.
-- Application web (WebGPU/WebGL2) enregistrant dans ScoutCloud via ScoutHub.
+Le ruban reprend les onglets de CathIA, avec des icônes dessinées pour chaque fonction :
 
-## Ce qu'on ajoute : l'onglet « Scout »
-
-| Commande | Rôle |
+| Onglet | Contenu |
 |---|---|
-| `scout.meuble.banc`, `.banc_dossier`, `.table`, `.table_prepa`, `.etagere` | un meuble paramétré en bois rond : un composant par perche (pied, traverse, claie…), numéro de pièce et section pour la nomenclature |
-| `scout.meuble.create` | idem, avec `type`, dimensions (`length`, `width`, `height`), diamètres (`leg`, `rail`, `claie`), position `at` et `rotation` |
-| `scout.coin.create` | un **coin de patrouille** : un conteneur qui range plusieurs meubles au sol (disposition « standard » : table, deux bancs, étagère, table de prépa) |
-| `scout.plan.meuble` | le **plan d'un meuble** (SVG A3 : face, côté, dessus, cotes d'ensemble, liste de débit, assemblages à la règle du tiers, montage) |
-| `scout.plan.coin` | la **vue d'ensemble du coin** (dessus, emprise de chaque meuble, total de bois) ; avec `meuble_paths`, écrit aussi le plan de chaque meuble |
-| `scout.meuble.types` | les modèles disponibles et leurs dimensions par défaut |
+| **Édition** | annuler / rétablir, points de retour (historique), déplacer-copier, répétitions, symétrie, supprimer, grouper, collisions, mesure, coupe |
+| **Créer** | **Nouveau meuble** (les 11 modèles de CathIA, réglables) et coin de patrouille ; traverse, équerre, plateau de claies, filet |
+| **Opérations** | **Façonner** : fendre, quart de bois, couper, pointe. **Assemblages** : tenon et mortaise (hachette, scié, plat, plat scié), mi-bois, queue d'aronde (3 types), chevilles, brêlage. Booléens |
+| **Formes** | bloc, cylindre, tube rond, sphère, cône ; tube carré, cornière, U, poutre en I |
+| **Esquisse** | esquisse contrainte et cotée, extrusion, révolution, trou, congés et chanfreins |
+| **Plans** | **Dessin technique** (feuille A3/A4, vues, échelle, cotes, cartouche, export SVG), export HTML, vue éclatée du montage |
+| **Nomenclature** | pièces, assemblages et liste de matériel, export CSV |
 
-Toutes passent par `Session::execute` comme le reste de SolidCraft : ruban, palette de commandes,
-scripts, CLI, canal de contrôle et MCP.
+Un **meuble** donne un plan par meuble ; un **coin de patrouille** range plusieurs meubles au sol et a sa
+vue d'ensemble. L'historique de SolidCraft (frise, marqueur, points de retour) est conservé.
+
+Toutes les fonctions passent par `Session::execute` : ruban, palette de commandes, scripts, CLI, MCP.
+`scout.meuble.create`, `scout.assemblage`, `scout.faconner`, `scout.piece.*`, `scout.profil`,
+`scout.coin.create`, `scout.atelier.dessin`, `scout.atelier.nomenclature`, `scout.export.html`.
 
 ## Construire
 

@@ -32,7 +32,7 @@ pub fn tab_name(tab: &str) -> String {
     crate::i18n::tr_label(&cased).to_string()
 }
 
-pub const TABS: &[&str] = &["SCOUT", "MODEL", "ASSEMBLE", "INSPECT", "MANAGE", "VIEW"];
+pub const TABS: &[&str] = &["ÉDITION", "CRÉER", "OPÉRATIONS", "FORMES", "ESQUISSE", "PLANS", "NOMENCLATURE"];
 
 /// Reading order of the compact, three-column constraint gallery. Icons come from each spec.
 pub const CONSTRAINT_GALLERY: &[&str] = &[
@@ -105,58 +105,65 @@ pub struct Section {
 pub const AGENT_ONLY: &[&str] = &["sketch.solve", "sketch.move3d"];
 
 pub const SECTIONS: &[Section] = &[
-    // SoLeadWorks is for people who have never touched CAD, and carries every function of CathIA:
-    // about fifty buttons in all, a few per panel, named in French, none hidden.
-    Section { tab: "SCOUT", panel: "MEUBLE", promoted: 2, ids: &["scout.meuble.create", "scout.coin.create"] },
-    Section { tab: "SCOUT", panel: "PIÈCES", promoted: 4, ids: &["scout.piece.traverse", "scout.piece.equerre", "scout.piece.claies", "scout.piece.filet"] },
-    Section { tab: "SCOUT", panel: "FORMES", promoted: 4, ids: &["solid.box", "solid.cylinder", "solid.sphere", "solid.cone"] },
-    Section { tab: "SCOUT", panel: "PLANS", promoted: 4, ids: &["scout.plan.meuble", "scout.plan.coin", "assembly.bom", "scout.export.html"] },
-    Section { tab: "SCOUT", panel: "MONTAGE", promoted: 1, ids: &["explode.create"] },
+    // The tabs and panels of CathIA, for people who have never touched CAD: the same names, the same
+    // order, every button in view, each with its own picture and a French name.
     Section {
-        tab: "ASSEMBLE",
+        tab: "ÉDITION",
+        panel: "HISTORIQUE",
+        promoted: 4,
+        ids: &["edit.undo", "edit.redo", "edit.checkpoint", "edit.restore_checkpoint"],
+    },
+    Section {
+        tab: "ÉDITION",
+        panel: "SÉLECTION",
+        promoted: 5,
+        ids: &["solid.move", "solid.pattern.rectangular", "solid.pattern.circular", "solid.mirror", "solid.remove"],
+    },
+    Section { tab: "ÉDITION", panel: "ARBORESCENCE", promoted: 2, ids: &["component.create", "component.from_bodies"] },
+    Section { tab: "ÉDITION", panel: "CONTRÔLE", promoted: 3, ids: &["inspect.interference", "inspect.measure", "inspect.section"] },
+    Section { tab: "ÉDITION", panel: "DÉPLACEMENT", promoted: 1, ids: &["occurrence.move"] },
+    Section { tab: "CRÉER", panel: "MEUBLES", promoted: 2, ids: &["scout.meuble.create", "scout.coin.create"] },
+    Section { tab: "CRÉER", panel: "PIÈCES", promoted: 4, ids: &["scout.piece.traverse", "scout.piece.equerre", "scout.piece.claies", "scout.piece.filet"] },
+    Section {
+        tab: "OPÉRATIONS",
         panel: "FAÇONNER",
         promoted: 4,
         ids: &["scout.faconner.demi", "scout.faconner.quart", "scout.faconner.couper", "scout.faconner.pointe"],
     },
     Section {
-        tab: "ASSEMBLE",
+        tab: "OPÉRATIONS",
         panel: "ASSEMBLAGES",
         promoted: 5,
-        ids: &["scout.assemblage.mibois", "scout.assemblage.tenon", "scout.assemblage.aronde", "scout.assemblage.cheville", "scout.assemblage.brelage"],
+        ids: &["scout.assemblage.tenon", "scout.assemblage.mibois", "scout.assemblage.aronde", "scout.assemblage.cheville", "scout.assemblage.brelage"],
     },
-    Section { tab: "ASSEMBLE", panel: "BOOLÉENS", promoted: 1, ids: &["solid.combine"] },
-    Section { tab: "ASSEMBLE", panel: "GROUPES", promoted: 3, ids: &["component.create", "occurrence.move", "occurrence.ground"] },
-    Section { tab: "MODEL", panel: "SKETCH", promoted: 1, ids: &["sketch.create", "sketch.edit"] },
-    Section { tab: "MODEL", panel: "CREATE", promoted: 3, ids: &["solid.extrude", "solid.revolve", "solid.hole"] },
-    Section { tab: "MODEL", panel: "MODIFY", promoted: 2, ids: &["solid.fillet", "solid.chamfer"] },
-    Section { tab: "MODEL", panel: "ARRANGE", promoted: 4, ids: &["solid.move", "solid.mirror", "solid.pattern.rectangular", "solid.pattern.circular"] },
-    // Only while a linked design is edited in place, pinned at the right as FINISH SKETCH is.
-    Section { tab: "MODEL", panel: "FINISH EDITING", promoted: 1, ids: &["component.finish_edit"] },
-    Section { tab: "INSPECT", panel: "MEASURE", promoted: 3, ids: &["inspect.measure", "inspect.interference", "inspect.section"] },
-    Section { tab: "MANAGE", panel: "HISTORY", promoted: 2, ids: &["edit.checkpoint", "edit.restore_checkpoint"] },
-    Section { tab: "MANAGE", panel: "DESIGN", promoted: 3, ids: &["parameters.change", "material.assign", "document.units"] },
-    Section { tab: "VIEW", panel: "VIEWS", promoted: 3, ids: &["view.fit", "view.home", "view.navigate", "view.visual_style", "view.grid"] },
-    Section { tab: "VIEW", panel: "SELECT", promoted: 0, ids: &[] },
+    Section { tab: "OPÉRATIONS", panel: "BOOLÉENS", promoted: 1, ids: &["solid.combine"] },
+    Section { tab: "FORMES", panel: "PRIMITIVES", promoted: 5, ids: &["solid.box", "solid.cylinder", "scout.profil.tube_rond", "solid.sphere", "solid.cone"] },
     Section {
-        tab: "SKETCH",
-        panel: "CREATE",
+        tab: "FORMES",
+        panel: "PROFILÉS MÉTAL",
         promoted: 4,
-        ids: &["sketch.line", "sketch.rectangle.two_point", "sketch.circle.center", "sketch.arc.three_point"],
+        ids: &["scout.profil.tube_carre", "scout.profil.corniere", "scout.profil.u", "scout.profil.i"],
     },
-    Section { tab: "SKETCH", panel: "MODIFY", promoted: 3, ids: &["sketch.trim", "sketch.offset", "sketch.fillet"] },
+    Section { tab: "ESQUISSE", panel: "ESQUISSE", promoted: 2, ids: &["sketch.create", "sketch.edit"] },
+    Section { tab: "ESQUISSE", panel: "SOLIDE", promoted: 3, ids: &["solid.extrude", "solid.revolve", "solid.hole"] },
+    Section { tab: "ESQUISSE", panel: "COINS", promoted: 2, ids: &["solid.fillet", "solid.chamfer"] },
+    // Only while a linked design is edited in place, pinned at the right as FINISH SKETCH is.
+    Section { tab: "ESQUISSE", panel: "FINISH EDITING", promoted: 1, ids: &["component.finish_edit"] },
+    Section { tab: "PLANS", panel: "FEUILLE", promoted: 1, ids: &["scout.atelier.dessin"] },
+    Section { tab: "PLANS", panel: "EXPORTER", promoted: 1, ids: &["scout.export.html"] },
+    Section { tab: "PLANS", panel: "MONTAGE", promoted: 1, ids: &["explode.create"] },
+    Section { tab: "NOMENCLATURE", panel: "TABLEAUX", promoted: 2, ids: &["scout.atelier.nomenclature", "component.properties"] },
+    // The sketch's own tab, shown while a sketch is open: drawing, constraints, dimensions, corners.
     Section {
         tab: "SKETCH",
-        panel: "CONSTRAIN",
+        panel: "DESSIN",
         promoted: 5,
-        ids: &[
-            "sketch.dimension",
-            "sketch.constraint.horizontal_vertical",
-            "sketch.constraint.coincident",
-            "sketch.constraint.parallel",
-            "sketch.constraint.perpendicular",
-            "sketch.constraint.equal",
-        ],
+        ids: &["sketch.line", "sketch.rectangle.two_point", "sketch.circle.center", "sketch.arc.three_point", "sketch.polygon.inscribed"],
     },
+    Section { tab: "SKETCH", panel: "CONTRAINTES", promoted: 5, ids: &["sketch.constraint.horizontal_vertical", "sketch.constraint.parallel", "sketch.constraint.perpendicular", "sketch.constraint.equal", "sketch.constraint.coincident"] },
+    Section { tab: "SKETCH", panel: "COTES", promoted: 1, ids: &["sketch.dimension"] },
+    Section { tab: "SKETCH", panel: "COINS", promoted: 3, ids: &["sketch.fillet", "sketch.chamfer.equal_distance", "sketch.trim"] },
+    Section { tab: "SKETCH", panel: "MODIFIER", promoted: 2, ids: &["sketch.offset", "sketch.mirror"] },
     Section { tab: "SKETCH", panel: "FINISH SKETCH", promoted: 2, ids: &["sketch.finish", "sketch.cancel"] },
 ];
 
@@ -462,7 +469,13 @@ pub const SPECIALTY_TABS: &[SpecialtyTab] = &[];
 pub fn tab_icon(tab: &str) -> &'static str {
     match tab {
         "MODEL" => "extrude",
-        "SCOUT" => "component",
+        "ÉDITION" => "scout_vue",
+        "CRÉER" => "scout_meuble",
+        "OPÉRATIONS" => "scout_mibois",
+        "FORMES" => "box",
+        "ESQUISSE" => "rect",
+        "PLANS" => "scout_plan",
+        "NOMENCLATURE" => "scout_nomenclature",
         "SURFACE" => "surface_extrude",
         "ASSEMBLE" => "joint",
         "INSERT" => "import",

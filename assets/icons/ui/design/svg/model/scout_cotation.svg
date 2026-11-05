@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Cotes</title>
+  <path d="M16 10L48 10A2 2 0 0 1 50 12L50 36A2 2 0 0 1 48 38L16 38A2 2 0 0 1 14 36L14 12A2 2 0 0 1 16 10Z" fill="#e2e8ef" stroke="#34465b" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M14 40L14 50" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M50 40L50 50" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M16 46L48 46" fill="none" stroke="#236ead" stroke-width="3.35" stroke-linejoin="round" stroke-linecap="round"/><path d="M41.86 49.36L48 46L41.86 42.64" fill="none" stroke="#236ead" stroke-width="3.35" stroke-linejoin="round" stroke-linecap="round"/>
+  
+  <path d="M54 10L60 10" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M54 38L60 38" fill="none" stroke="#236ead" stroke-width="2.55" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M57 12L57 36" fill="none" stroke="#236ead" stroke-width="3.35" stroke-linejoin="round" stroke-linecap="round"/><path d="M53.64 29.86L57 36L60.36 29.86" fill="none" stroke="#236ead" stroke-width="3.35" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

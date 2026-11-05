@@ -29,6 +29,21 @@ pub const ASSEMBLAGES: &[(&str, &str)] = &[
     ("brelage", "Brêlage (dernier recours)"),
 ];
 
+/// The groups CathIA lists the assemblages in: (heading, first kind, number of kinds).
+const GROUPES: &[(&str, usize, usize)] = &[("Tenons et mortaises", 1, 4), ("Mi-bois", 0, 1), ("Queues d’aronde", 5, 3), ("Chevilles et brêlage", 8, 2)];
+
+/// What each assemblage blocks, in CathIA's words.
+fn degres(kind: &str) -> &'static str {
+    match kind {
+        "mibois" => "Bloque 5 degrés de liberté : reste le décollement perpendiculaire aux pièces (ajoutez une cheville).",
+        "hache" | "scie" => "Bloque 4 degrés de liberté : reste la rotation autour du tenon et le glissement hors de la mortaise.",
+        "plat" | "platscie" => "Bloque 5 degrés de liberté : reste le glissement hors de la mortaise.",
+        "aronde1" | "aronde2" | "aronde3" => "Bloque 5 degrés de liberté : reste le glissement latéral dans la rainure.",
+        "cheville" => "Bloque la translation dans le plan perpendiculaire à la cheville ; reste la rotation autour d’elle.",
+        _ => "Dernier recours : le brêlage tient les pièces mais ne les bloque pas comme un assemblage taillé.",
+    }
+}
+
 const FACONNAGES: &[(&str, &str)] = &[("demi", "Fendre en deux"), ("quart", "Quart de bois"), ("couper", "Couper à la longueur"), ("pointe", "Tailler une pointe")];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,6 +56,7 @@ pub enum Which {
     Claies,
     Filet,
     Coin,
+    Profil,
 }
 
 /// One dialog's values (the fields it does not use stay unused).
@@ -58,6 +74,9 @@ pub struct Sc {
     pub rotation: usize,
     // assemblage and shaping
     pub through: bool,
+    /// Assemblage: the pieces swap their roles; mi-bois: add a peg.
+    pub invert: bool,
+    pub chev: bool,
     pub pc: String,
     pub d: String,
     pub turns: String,
@@ -77,6 +96,7 @@ impl Sc {
             Which::Equerre => ("300".into(), "50".into(), String::new()),
             Which::Claies => ("1000".into(), "600".into(), "20".into()),
             Which::Filet => ("1000".into(), "600".into(), "30".into()),
+            Which::Profil => ("40".into(), "3".into(), "1000".into()),
             _ => (String::new(), String::new(), String::new()),
         };
         let mut s = Sc {
@@ -89,6 +109,8 @@ impl Sc {
             y: "0".into(),
             rotation: 0,
             through: false,
+            invert: false,
+            chev: false,
             pc: "50".into(),
             d: String::new(),
             turns: "6".into(),
@@ -124,6 +146,11 @@ pub fn start(_app: &SolveApp, id: &str) -> Option<(Kind, Vec<SelInput>)> {
         "scout.piece.equerre" => (Sc::new(Which::Equerre, 0), Vec::new()),
         "scout.piece.claies" => (Sc::new(Which::Claies, 0), Vec::new()),
         "scout.piece.filet" => (Sc::new(Which::Filet, 0), Vec::new()),
+        "scout.profil.tube_rond" => (Sc::new(Which::Profil, 0), Vec::new()),
+        "scout.profil.tube_carre" => (Sc::new(Which::Profil, 1), Vec::new()),
+        "scout.profil.corniere" => (Sc::new(Which::Profil, 2), Vec::new()),
+        "scout.profil.u" => (Sc::new(Which::Profil, 3), Vec::new()),
+        "scout.profil.i" => (Sc::new(Which::Profil, 4), Vec::new()),
         _ => {
             if let Some(k) = id.strip_prefix("scout.assemblage.") {
                 let kind = match k {
@@ -156,6 +183,7 @@ pub fn title(k: &Sc) -> &'static str {
         Which::Claies => "PLATEAU DE CLAIES",
         Which::Filet => "FILET DE FICELLE",
         Which::Coin => "COIN DE PATROUILLE",
+        Which::Profil => "PROFILÉ MÉTAL",
     }
 }
 
@@ -169,6 +197,7 @@ pub fn command_id(k: &Sc) -> &'static str {
         Which::Claies => "scout.piece.claies",
         Which::Filet => "scout.piece.filet",
         Which::Coin => "scout.coin.create",
+        Which::Profil => "scout.profil",
     }
 }
 
@@ -211,12 +240,26 @@ pub fn rows(ui: &mut egui::Ui, k: &mut Sc) -> bool {
             choice_row(ui, "Rotation", "sc_rot", &mut k.rotation, &ROTATIONS);
         }
         Which::Assemblage => {
-            let labels: Vec<&str> = ASSEMBLAGES.iter().map(|(_, l)| *l).collect();
-            choice_row(ui, "Assemblage", "sc_asm", &mut k.kind, &labels);
+            ui.label(egui::RichText::new("Type d’assemblage").strong());
+            for (titre, first, n) in GROUPES {
+                ui.label(egui::RichText::new(*titre).weak());
+                for i in *first..*first + *n {
+                    if let Some((_, label)) = ASSEMBLAGES.get(i) {
+                        ui.selectable_value(&mut k.kind, i, *label);
+                    }
+                }
+            }
             let kind = ASSEMBLAGES.get(k.kind).map_or("", |(n, _)| *n);
+            ui.add_space(4.0);
+            ui.label(egui::RichText::new(degres(kind)).italics());
+            ui.add_space(4.0);
             match kind {
                 "mibois" => {
                     text_row(ui, "Part de la pièce 1 (%)", &mut k.pc, "50");
+                    crate::dialogs::form_row(ui, "Ajouter une cheville", |ui| check(ui, &mut k.chev));
+                    if k.chev {
+                        text_row(ui, "Diamètre de la cheville (mm)", &mut k.d, "20");
+                    }
                 }
                 "cheville" => {
                     text_row(ui, "Diamètre de la cheville (mm)", &mut k.d, "20");
@@ -228,6 +271,9 @@ pub fn rows(ui: &mut egui::Ui, k: &mut Sc) -> bool {
                     text_row(ui, "Diamètre ou épaisseur du tenon (mm)", &mut k.d, "automatique");
                     crate::dialogs::form_row(ui, "Mortaise débouchante", |ui| check(ui, &mut k.through));
                 }
+            }
+            if !matches!(kind, "mibois" | "cheville" | "brelage") {
+                crate::dialogs::form_row(ui, "⇄ Inverser (la pièce 2 porte le tenon)", |ui| check(ui, &mut k.invert));
             }
         }
         Which::Faconner => {
@@ -265,6 +311,14 @@ pub fn rows(ui: &mut egui::Ui, k: &mut Sc) -> bool {
             text_row(ui, "Largeur (mm)", &mut k.b, "");
             text_row(ui, "Maille (mm)", &mut k.c, "");
         }
+        Which::Profil => {
+            let kinds = ["Tube rond", "Tube carré", "Cornière", "Profilé en U", "Poutre en I"];
+            choice_row(ui, "Profilé", "sc_prof", &mut k.kind, &kinds);
+            text_row(ui, "Dimension extérieure (mm)", &mut k.a, "");
+            text_row(ui, "Épaisseur de la paroi (mm)", &mut k.b, "");
+            text_row(ui, "Longueur (mm)", &mut k.c, "");
+            choice_row(ui, "Direction", "sc_dir2", &mut k.dir, &["Longueur (X)", "Largeur (Y)", "Verticale (Z)"]);
+        }
         Which::Coin => {
             text_row(ui, "Nom du coin", &mut k.name, "Coin de patrouille");
             ui.label(egui::RichText::new("Une table, deux bancs, une étagère et une table de prépa : ajoutez ensuite d’autres meubles.").weak());
@@ -299,12 +353,18 @@ pub fn commands(k: &Sc, inputs: &[SelInput]) -> Result<Vec<(String, Value)>, Str
         }
         Which::Assemblage => {
             let kind = ASSEMBLAGES.get(k.kind).map(|(n, _)| *n).ok_or("choisissez un assemblage")?;
-            let mut p = json!({"kind": kind, "a": body_name(inputs, 0)?, "b": body_name(inputs, 1)?});
+            let (first, second) = (body_name(inputs, 0)?, body_name(inputs, 1)?);
+            let tenon = !matches!(kind, "mibois" | "cheville" | "brelage");
+            let (a, b) = if tenon && k.invert { (second, first) } else { (first, second) };
+            let mut p = json!({"kind": kind, "a": a, "b": b});
             if !k.d.trim().is_empty() {
                 p["d"] = json!(number("Diamètre", &k.d)?);
             }
             match kind {
-                "mibois" => p["pc"] = json!(number("Part", &k.pc)?),
+                "mibois" => {
+                    p["pc"] = json!(number("Part", &k.pc)?);
+                    p["chev"] = json!(k.chev);
+                }
                 "brelage" => p["turns"] = json!(number("Tours", &k.turns)?),
                 "cheville" => {}
                 _ => p["through"] = json!(k.through),
@@ -332,6 +392,11 @@ pub fn commands(k: &Sc, inputs: &[SelInput]) -> Result<Vec<(String, Value)>, Str
         Which::Equerre => json!({"unit": number("Unité", &k.a)?, "d": number("Diamètre", &k.b)?}),
         Which::Claies => json!({"long": number("Longueur", &k.a)?, "larg": number("Largeur", &k.b)?, "dc": number("Diamètre", &k.c)?}),
         Which::Filet => json!({"long": number("Longueur", &k.a)?, "larg": number("Largeur", &k.b)?, "maille": number("Maille", &k.c)?}),
+        Which::Profil => {
+            let kinds = ["tube_rond", "tube_carre", "corniere", "u", "i"];
+            let dir = ["X", "Y", "Z"].get(k.dir).copied().unwrap_or("X");
+            json!({"kind": kinds.get(k.kind).copied().unwrap_or("tube_carre"), "size": number("Dimension", &k.a)?, "epaisseur": number("Épaisseur", &k.b)?, "length": number("Longueur", &k.c)?, "dir": dir})
+        }
         Which::Coin => {
             if k.name.trim().is_empty() { json!({}) } else { json!({"name": k.name.trim()}) }
         }
@@ -351,7 +416,7 @@ mod tests {
             let mut s = solidcraft_engine::Session::default();
             assert!(s.execute(&c[0].0, &c[0].1).is_ok(), "{}", c[0].1);
         }
-        for which in [Which::Traverse, Which::Equerre, Which::Claies, Which::Filet, Which::Coin] {
+        for which in [Which::Traverse, Which::Equerre, Which::Claies, Which::Filet, Which::Coin, Which::Profil] {
             let c = commands(&Sc::new(which, 0), &[]).unwrap_or_default();
             let mut s = solidcraft_engine::Session::default();
             assert!(s.execute(&c[0].0, &c[0].1).is_ok(), "{:?}: {}", which, c[0].1);

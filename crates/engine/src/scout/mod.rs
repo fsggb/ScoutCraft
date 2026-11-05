@@ -4,6 +4,8 @@
 //! drawn from them). Pure data in, data out; the commands that build them in a design are
 //! `cmd::scout`.
 
+pub mod dessin;
 pub mod models;
+pub mod nomenclature;
 pub mod plan;
 pub mod pole;

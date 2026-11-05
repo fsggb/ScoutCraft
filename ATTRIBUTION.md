@@ -16,6 +16,32 @@ Editable drawing code, native projects and shipped exports are collected under `
 |---|---|---|---|
 | assets/branding/soleadworks/logo-cathia.jpg, assets/branding/soleadworks/mark.png, assets/branding/soleadworks/32x32/soleadworks.png, assets/branding/soleadworks/256x256/soleadworks.png, assets/branding/soleadworks/512x512/soleadworks.png | FSGGB (logo CathIA) | CathIA.jpg of the fsggb/CathIA repository, cropped and resized | MIT OR Apache-2.0 |
 | assets/branding/soleadworks/wordmark.svg | FSGGB | original drawing (text only) | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_aronde.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_brelage.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_cartouche.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_cheville.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_claies.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_coin.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_cotation.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_couper.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_equerre.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_fendre.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_filet.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_html.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_inverser.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_meuble.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_mibois.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_montage.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_nomenclature.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_plan.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_plan_coin.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_pointe.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_quart.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_tenon.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_tenon_plat.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_tenon_scie.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_traverse.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
+| assets/icons/ui/design/svg/model/scout_vue.svg | SoLeadWorks (FSGGB) | original pictogram drawn for this application (woodworking), in the SolidCraft icon palette | MIT OR Apache-2.0 |
 | assets/render/catalog/capabilities.json | SolidCraft contributors | Byte-identical runtime export of docs/render-materials/capabilities.json; generated and checked by tools/render-library/generate.py | MIT OR Apache-2.0 |
 | assets/render/catalog/environments.json | SolidCraft contributors | Byte-identical runtime export of docs/render-materials/environments.json; generated and checked by tools/render-library/generate.py | MIT OR Apache-2.0 |
 | assets/render/catalog/lighting.json | SolidCraft contributors | Byte-identical runtime export of docs/render-materials/lighting.json; generated and checked by tools/render-library/generate.py | MIT OR Apache-2.0 |
