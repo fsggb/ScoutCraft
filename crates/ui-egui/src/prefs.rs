@@ -35,6 +35,14 @@ use crate::viewport::NavMode;
 
 pub const UNITS: &[&str] = &["mm", "cm", "m", "in", "ft"];
 pub const OPENSCAD_NAV: &str = "openscad";
+/// CathIA's mouse (three.js orbit controls): left drag on empty space orbits, right drag pans, the
+/// middle button and the wheel zoom.
+pub const CATHIA_NAV: &str = "cathia";
+
+/// Whether a left drag on empty space orbits the camera (the preset has no other use for it).
+pub fn left_drag_orbits(nav: &str) -> bool {
+    nav == OPENSCAD_NAV || nav == CATHIA_NAV
+}
 pub const TOUCHPAD_NAV: &str = "touchpad";
 /// A mouse button that can drag the camera.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -113,6 +121,15 @@ pub const NAV_PRESETS: &[NavPreset] = &[
         middle_double_click: None,
         right_drag_orbits: None,
         bindings: &[bind(Middle, NavKeys::SHIFT, Orbit), bind(Middle, NavKeys::NONE, Pan), bind(Right, NavKeys::NONE, Orbit)],
+    },
+    NavPreset {
+        id: CATHIA_NAV,
+        label: "CathIA",
+        help: "Left drag on empty space orbits, right drag pans, middle drag and the wheel zoom; a click selects, a long press opens the menu",
+        reverse_zoom: false,
+        middle_double_click: Some("fit"),
+        right_drag_orbits: Some(false),
+        bindings: &[bind(Left, NavKeys::NONE, Orbit), bind(Right, NavKeys::NONE, Pan), bind(Middle, NavKeys::NONE, Zoom)],
     },
     NavPreset {
         id: "solidworks",
@@ -242,7 +259,14 @@ impl NavPreset {
     }
 
     pub(crate) fn translated_label(&self) -> &str {
-        if self.id == TOUCHPAD_NAV { crate::i18n::tr("nav.touchpad.label") } else { crate::i18n::tr_label(self.label) }
+        if self.id == TOUCHPAD_NAV {
+            crate::i18n::tr("nav.touchpad.label")
+        } else if self.id == "fusion" {
+            // the mouse as it is now
+            "Actuel"
+        } else {
+            crate::i18n::tr_label(self.label)
+        }
     }
 }
 

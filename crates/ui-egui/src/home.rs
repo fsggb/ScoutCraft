@@ -15,13 +15,18 @@ use crate::ui_kit::{self, FileView, RecoveryMessage};
 /// Recent designs kept.
 pub const MAX_RECENT: usize = 12;
 const THUMB: [usize; 2] = solidcraft_engine::io::THUMBNAIL_SIZE;
-const SAMPLE_PICTURES: [&[u8]; 6] = [
+const SAMPLE_PICTURES: [&[u8]; 11] = [
     include_bytes!("../../../assets/samples/exports/0.png"),
     include_bytes!("../../../assets/samples/exports/1.png"),
     include_bytes!("../../../assets/samples/exports/2.png"),
     include_bytes!("../../../assets/samples/exports/3.png"),
     include_bytes!("../../../assets/samples/exports/4.png"),
     include_bytes!("../../../assets/samples/exports/5.png"),
+    include_bytes!("../../../assets/samples/exports/6.png"),
+    include_bytes!("../../../assets/samples/exports/7.png"),
+    include_bytes!("../../../assets/samples/exports/8.png"),
+    include_bytes!("../../../assets/samples/exports/9.png"),
+    include_bytes!("../../../assets/samples/exports/10.png"),
 ];
 
 /// What a background job makes: a key ("sample:N" or a path), the picture, and for samples the

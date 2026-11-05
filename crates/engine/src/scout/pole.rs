@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 
 pub type V3 = [f64; 3];
 
+fn one() -> u8 {
+    1
+}
+
 /// Most poles one design part may have (a hostile size cannot ask for millions).
 pub const MAX_POLES: usize = 400;
 /// Most operations one pole record may carry (the record is a property of 4 KB).
@@ -94,9 +98,9 @@ pub enum SplitMode {
 pub enum Op {
     /// A stub joined to the end of the pole. `wide` is the local axis (0 = x, 1 = y) the flat
     /// tenon's width lies along.
-    Tenon { end: End, style: Style, d: f64, w: f64, len: f64, wide: u8, theta: f64 },
+    Tenon { end: End, style: Style, d: f64, w: f64, len: f64, wide: u8, theta: f64, #[serde(default = "one")] typ: u8 },
     /// A cut that takes the tenon: `c` is where it starts (outside the pole), `u` its direction.
-    Mortise { c: V3, u: V3, style: Style, d: f64, w: f64, depth: f64, wide: u8, theta: f64 },
+    Mortise { c: V3, u: V3, style: Style, d: f64, w: f64, depth: f64, wide: u8, theta: f64, #[serde(default = "one")] typ: u8, #[serde(default)] open: f64 },
     /// A box cut centred on `c` with half sizes `h` (a half-lap notch).
     Notch { c: V3, h: V3 },
     /// A round hole (a peg's).
@@ -104,6 +108,9 @@ pub enum Op {
     Split { mode: SplitMode },
     /// Cut everything beyond local z = `at` at that end.
     CutOff { end: End, at: f64 },
+    /// The end `end` is cut to fit the round pole `with` (`#n`: the pole of index n of the part, or the
+    /// component's name): the pole is built `extra` mm longer and the other pole's body is cut from it.
+    Saddle { with: String, end: End, extra: f64 },
     /// A sharpened end: the last `len` mm taper to a point.
     Point { end: End, len: f64 },
 }
@@ -172,6 +179,20 @@ impl Pole {
     pub fn end(&self) -> V3 {
         add(self.origin, mul(self.dir, self.start + self.length))
     }
+    /// The local z range the body is built over: the visible part, longer at an end that is cut to fit
+    /// another pole.
+    pub fn built_range(&self) -> (f64, f64) {
+        let (mut z0, mut z1) = (self.start, self.start + self.length);
+        for o in &self.ops {
+            if let Op::Saddle { end, extra, .. } = o {
+                match end {
+                    End::Start => z0 -= extra,
+                    End::End => z1 += extra,
+                }
+            }
+        }
+        (z0, z1)
+    }
     pub fn tenon_total(&self) -> f64 {
         self.ops.iter().map(|o| if let Op::Tenon { len, .. } = o { *len } else { 0.0 }).sum()
     }
@@ -231,11 +252,13 @@ pub struct TenonOpts {
     pub w: f64,
     /// Dovetail flare, in degrees.
     pub theta: f64,
+    /// Dovetail kind: 1 classic, 2 through (comes out the other side), 3 along the receiving pole's axis.
+    pub typ: u8,
 }
 
 impl TenonOpts {
     pub fn new(style: Style) -> Self {
-        TenonOpts { style, through: false, d: 0.0, w: 0.0, theta: 15.0 }
+        TenonOpts { style, through: false, d: 0.0, w: 0.0, theta: 15.0, typ: 1 }
     }
     pub fn through(mut self) -> Self {
         self.through = true;
@@ -287,7 +310,37 @@ impl Build {
         let default_d = (dt * 0.55).min(dr / 3.0).max(8.0).round();
         let d = if o.d > 0.0 { o.d } else if o.style.round() { default_d } else { (dt * 0.6).min(dr / 3.0 + 8.0).max(8.0).round() };
         let w = if o.w > 0.0 { o.w } else { (dt * 0.7).max(15.0).round() };
-        let tlen = if o.through { 2.0 * rr + 6.0 } else { (0.6 * dr / sin).max(overlap.max(0.0)).max(20.0).round() };
+        let u_world = if end == End::End { pt.dir } else { mul(pt.dir, -1.0) };
+        // Where the tenon enters `r`, and how much wood it finds there: a split log has a flat face.
+        let entry = add(pt.origin, mul(pt.dir, surf));
+        let chord = 2.0 * rr;
+        let mut avail = chord;
+        let (ul, el) = (pr.local_dir(u_world), pr.local(entry));
+        for op in &pr.ops {
+            if let Op::Split { mode } = op {
+                if ul[0] > 1e-6 && el[0] < 0.0 {
+                    avail = avail.min(-el[0] / ul[0]);
+                }
+                if *mode == SplitMode::Quart && ul[1] > 1e-6 && el[1] < 0.0 {
+                    avail = avail.min(-el[1] / ul[1]);
+                }
+            }
+        }
+        if avail < 12.0 {
+            return Err(format!("« {} » est trop mince, ou fendue, à cet endroit pour recevoir un tenon de « {} »", pr.role, pt.role));
+        }
+        let aronde = o.style == Style::Aronde;
+        let through = (o.through || (aronde && o.typ == 2)) && avail >= chord - 0.5;
+        let tlen = if through { chord + 6.0 } else { (0.6 * avail).min(avail - 4.0).max(12.0).round() };
+        // A dovetail flares towards its tip, but never beyond the pole it is cut in.
+        let mut theta = if o.theta > 0.0 { o.theta } else { 20.0 };
+        if aronde {
+            let tip = w + 2.0 * tlen * theta.to_radians().tan();
+            let limit = 0.92 * dt;
+            if tip > limit {
+                theta = (((limit - w) / (2.0 * tlen)).max(0.0875)).atan().to_degrees();
+            }
+        }
         // Trim to the surface; the stub goes in.
         {
             let p = &mut self.poles[t];
@@ -300,18 +353,28 @@ impl Build {
             }
         }
         let ptn = self.poles[t].clone();
-        // Width along whichever of the tenon pole's x or y is nearer `r`'s axis.
+        // The width lies along whichever of the tenon pole's x or y is nearer `r`'s axis (a dovetail
+        // along the axis of `r` lies across it).
         let rl = ptn.local_dir(pr.dir);
-        let wide = if rl[0].abs() >= rl[1].abs() { 0 } else { 1 };
-        let u_world = if end == End::End { pt.dir } else { mul(pt.dir, -1.0) };
-        self.poles[t].push(Op::Tenon { end, style: o.style, d, w, len: tlen, wide, theta: o.theta })?;
+        let near = if rl[0].abs() >= rl[1].abs() { 0 } else { 1 };
+        let wide = if aronde && o.typ == 3 { 1 - near } else { near };
+        let typ = if aronde { o.typ.clamp(1, 3) } else { 1 };
+        self.poles[t].push(Op::Tenon { end, style: o.style, d, w, len: tlen, wide, theta, typ })?;
+        if pr.width == 0.0 && ptn.width == 0.0 {
+            // the end of `t` is cut to the curve of `r`, so the two meet without a gap or an overlap
+            let rt = ptn.radius();
+            let far = (r_in * r_in - (off.abs() + rt).powi(2)).max(0.0).sqrt();
+            let extra = ((r_in - far) / sin + 2.0).min(chord * 0.9);
+            self.poles[t].push(Op::Saddle { with: format!("#{r}"), end, extra })?;
+        }
         // The mortise: on `t`'s line, from just outside the surface of `r`.
-        let entry = add(pt.origin, mul(pt.dir, surf));
         let base = sub(entry, mul(u_world, 3.0));
-        let depth = if o.through { 2.0 * rr + 10.0 } else { tlen + JEU + 3.0 };
+        let depth = if through { chord + 10.0 } else { tlen + JEU + 3.0 };
         let (c, u) = (self.poles[r].local(base), self.poles[r].local_dir(u_world));
         let (mw, md) = if o.style.round() { (d + JEU, d + JEU) } else { (w + JEU, d + JEU) };
-        self.poles[r].push(Op::Mortise { c, u, style: o.style, d: md, w: mw, depth, wide, theta: o.theta })?;
+        // A dovetail's groove runs the whole width of `r` along the slide direction.
+        let open = if aronde { 2.0 * pr.radius() + 20.0 } else { 0.0 };
+        self.poles[r].push(Op::Mortise { c, u, style: o.style, d: md, w: mw, depth, wide, theta, typ, open })?;
         Ok(())
     }
 
@@ -388,7 +451,7 @@ impl Build {
         let reach = pr.radius() * 2.0 / len(cross(pt.dir, pr.dir)).max(0.35) + 20.0;
         let base = sub(ct, mul(pt.dir, reach / 2.0));
         let (c, u) = (pr.local(base), pr.local_dir(pt.dir));
-        self.poles[r].push(Op::Mortise { c, u, style: Style::Hache, d: pt.diameter + JEU, w: pt.diameter + JEU, depth: reach, wide: 0, theta: 0.0 })
+        self.poles[r].push(Op::Mortise { c, u, style: Style::Hache, d: pt.diameter + JEU, w: pt.diameter + JEU, depth: reach, wide: 0, theta: 0.0, typ: 1, open: 0.0 })
     }
 
     /// A peg of diameter `d` through the point `p` along `k`, through `a` and `b`.

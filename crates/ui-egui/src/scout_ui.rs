@@ -191,22 +191,24 @@ pub fn show_dessin(app: &mut SolveApp, ctx: &egui::Context) {
     }
     let mut open = true;
     let mut save: Option<(&'static str, &'static str, &'static str, Value)> = None;
-    egui::Window::new("Dessin technique").id(egui::Id::new("sc_dessin")).open(&mut open).default_size([980.0, 700.0]).resizable(true).show(ctx, |ui| {
+    egui::Window::new("Dessin technique").id(egui::Id::new("sc_dessin")).open(&mut open).default_pos([40.0, 150.0]).default_size([980.0, 620.0]).resizable(true).show(ctx, |ui| {
         ui.horizontal_wrapped(|ui| {
             let mut names = vec!["Automatique".to_string()];
             names.extend(list.iter().map(|(l, _, _)| l.clone()));
-            let current = names.get(d.subject).cloned().unwrap_or_default();
-            egui::ComboBox::from_label("Sujet").selected_text(current).show_ui(ui, |ui| {
+            ui.label("Sujet");
+            egui::ComboBox::from_id_salt("sc_dessin_sujet").selected_text(names.get(d.subject).cloned().unwrap_or_default()).show_ui(ui, |ui| {
                 for (i, n) in names.iter().enumerate() {
                     ui.selectable_value(&mut d.subject, i, n);
                 }
             });
-            egui::ComboBox::from_label("Format").selected_text(["A3", "A4"][d.format.min(1)]).show_ui(ui, |ui| {
+            ui.label("Format");
+            egui::ComboBox::from_id_salt("sc_dessin_format").selected_text(["A3", "A4"][d.format.min(1)]).show_ui(ui, |ui| {
                 ui.selectable_value(&mut d.format, 0, "A3 (420 × 297)");
                 ui.selectable_value(&mut d.format, 1, "A4 (297 × 210)");
             });
+            ui.label("Échelle");
             let label = if d.echelle == 0 { "Automatique".to_string() } else { format!("1:{}", ECHELLES.get(d.echelle - 1).copied().unwrap_or(1.0)) };
-            egui::ComboBox::from_label("Échelle").selected_text(label).show_ui(ui, |ui| {
+            egui::ComboBox::from_id_salt("sc_dessin_echelle").selected_text(label).show_ui(ui, |ui| {
                 ui.selectable_value(&mut d.echelle, 0, "Automatique");
                 for (i, e) in ECHELLES.iter().enumerate() {
                     ui.selectable_value(&mut d.echelle, i + 1, format!("1:{e}"));
@@ -292,10 +294,11 @@ pub fn show_nomenclature(app: &mut SolveApp, ctx: &egui::Context) {
     let mut open = true;
     let mut save = false;
     let mut copy: Option<String> = None;
-    egui::Window::new("Nomenclature").id(egui::Id::new("sc_nomenclature")).open(&mut open).default_size([760.0, 560.0]).resizable(true).show(ctx, |ui| {
+    egui::Window::new("Nomenclature").id(egui::Id::new("sc_nomenclature")).open(&mut open).default_pos([60.0, 170.0]).default_size([760.0, 520.0]).resizable(true).show(ctx, |ui| {
         let mut names = vec!["Tout le projet".to_string()];
         names.extend(list.iter().map(|(l, _, _)| l.clone()));
-        egui::ComboBox::from_label("Sujet").selected_text(names.get(n.subject).cloned().unwrap_or_default()).show_ui(ui, |ui| {
+        ui.horizontal(|ui| ui.label("Sujet"));
+        egui::ComboBox::from_id_salt("sc_nomenclature_sujet").selected_text(names.get(n.subject).cloned().unwrap_or_default()).show_ui(ui, |ui| {
             for (i, name) in names.iter().enumerate() {
                 ui.selectable_value(&mut n.subject, i, name);
             }

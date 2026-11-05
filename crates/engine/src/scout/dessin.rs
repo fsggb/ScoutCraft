@@ -480,7 +480,7 @@ pub fn iso_only(poles: &[Pole]) -> String {
     draw_view(&mut prims, View::Iso, poles, [0.0, 0.0], 1.0, ext);
     let (w, hh) = (hi[0] - lo[0], hi[1] - lo[1]);
     let mut o = String::new();
-    let _ = writeln!(o, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-20 -20 {:.1} {:.1}\" class=\"iso\">", w + 40.0, hh + 40.0);
+    let _ = writeln!(o, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"-20 -20 {:.1} {:.1}\" class=\"iso\">{STYLE}", w + 40.0, hh + 40.0);
     for p in &prims {
         write_prim(&mut o, p, true);
     }

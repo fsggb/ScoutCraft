@@ -32,7 +32,7 @@ pub fn tab_name(tab: &str) -> String {
     crate::i18n::tr_label(&cased).to_string()
 }
 
-pub const TABS: &[&str] = &["ÉDITION", "CRÉER", "OPÉRATIONS", "FORMES", "ESQUISSE", "PLANS", "NOMENCLATURE"];
+pub const TABS: &[&str] = &["ÉDITION", "CRÉER", "OPÉRATIONS", "FORMES", "ESQUISSE"];
 
 /// Reading order of the compact, three-column constraint gallery. Icons come from each spec.
 pub const CONSTRAINT_GALLERY: &[&str] = &[
@@ -137,6 +137,7 @@ pub const SECTIONS: &[Section] = &[
         ids: &["scout.assemblage.tenon", "scout.assemblage.mibois", "scout.assemblage.aronde", "scout.assemblage.cheville", "scout.assemblage.brelage"],
     },
     Section { tab: "OPÉRATIONS", panel: "BOOLÉENS", promoted: 1, ids: &["solid.combine"] },
+    Section { tab: "OPÉRATIONS", panel: "MONTAGE", promoted: 1, ids: &["explode.create"] },
     Section { tab: "FORMES", panel: "PRIMITIVES", promoted: 5, ids: &["solid.box", "solid.cylinder", "scout.profil.tube_rond", "solid.sphere", "solid.cone"] },
     Section {
         tab: "FORMES",
@@ -149,10 +150,6 @@ pub const SECTIONS: &[Section] = &[
     Section { tab: "ESQUISSE", panel: "COINS", promoted: 2, ids: &["solid.fillet", "solid.chamfer"] },
     // Only while a linked design is edited in place, pinned at the right as FINISH SKETCH is.
     Section { tab: "ESQUISSE", panel: "FINISH EDITING", promoted: 1, ids: &["component.finish_edit"] },
-    Section { tab: "PLANS", panel: "FEUILLE", promoted: 1, ids: &["scout.atelier.dessin"] },
-    Section { tab: "PLANS", panel: "EXPORTER", promoted: 1, ids: &["scout.export.html"] },
-    Section { tab: "PLANS", panel: "MONTAGE", promoted: 1, ids: &["explode.create"] },
-    Section { tab: "NOMENCLATURE", panel: "TABLEAUX", promoted: 2, ids: &["scout.atelier.nomenclature", "component.properties"] },
     // The sketch's own tab, shown while a sketch is open: drawing, constraints, dimensions, corners.
     Section {
         tab: "SKETCH",
@@ -474,8 +471,6 @@ pub fn tab_icon(tab: &str) -> &'static str {
         "OPÉRATIONS" => "scout_mibois",
         "FORMES" => "box",
         "ESQUISSE" => "rect",
-        "PLANS" => "scout_plan",
-        "NOMENCLATURE" => "scout_nomenclature",
         "SURFACE" => "surface_extrude",
         "ASSEMBLE" => "joint",
         "INSERT" => "import",

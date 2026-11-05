@@ -1390,6 +1390,9 @@ impl SolveApp {
                     self.cam = Camera::default();
                     self.fit_view();
                 }
+                if matches!(id, "scout.meuble.create" | "scout.coin.create") {
+                    self.fit_view();
+                }
                 if matches!(id, "doc.open" | "file.save" | "file.save_as")
                     && let Some(p) = self.session.path.clone()
                 {

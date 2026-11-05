@@ -47,6 +47,7 @@ fn operations(p: &Pole) -> String {
             Op::Hole { d, .. } => format!("trou Ø{}", mm(*d)),
             Op::Split { mode } => if *mode == SplitMode::Demi { "fendu en deux".into() } else { "quart de bois".into() },
             Op::CutOff { .. } => "coupé".to_string(),
+            Op::Saddle { .. } => "gueule de loup".to_string(),
             Op::Point { len, .. } => format!("pointe {}", mm(*len)),
         });
     }

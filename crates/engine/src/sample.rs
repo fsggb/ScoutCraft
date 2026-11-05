@@ -39,18 +39,33 @@ pub struct Sample {
     pub script: fn() -> Value,
 }
 
-/// The built-in samples (the start page lists them), each built through commands.
+/// The built-in samples (the start page lists them): CathIA's eleven models, each built by one command.
 pub fn samples() -> Vec<Sample> {
-    vec![
-        Sample { name: "Sample Plate", about: "Parametric plate with fillets, holes and a bored boss", script },
-        Sample { name: "Sheet Metal Bracket", about: "Base flange with edge flanges and a hem on a 2 mm rule", script: bracket },
-        Sample { name: "Hinge Assembly", about: "Two components and a revolute joint, driven to 60°", script: hinge },
-        Sample { name: "Plastic Enclosure", about: "Shelled box with a lip, screw bosses, a rest and a snap fit", script: enclosure },
-        Sample { name: "Bolted Flange", about: "Hub and flange with a circular pattern driven by a parameter", script: flange },
-        Sample { name: "Vent Plate", about: "Slots in a rectangular pattern: rows, columns and pitch are parameters", script: vents },
-    ]
+    crate::scout::models::MODELS.iter().map(|m| Sample { name: m.name, about: m.summary, script: model_script(m.id) }).collect()
 }
 
+fn model_script(id: &'static str) -> fn() -> Value {
+    // A function pointer per model, so the list stays a plain table.
+    match id {
+        "etabli" => || one("etabli"),
+        "banc" => || one("banc"),
+        "fauteuil" => || one("fauteuil"),
+        "bancdos" => || one("bancdos"),
+        "bancdiag" => || one("bancdiag"),
+        "table" => || one("table"),
+        "prepa" => || one("prepa"),
+        "cuisine" => || one("cuisine"),
+        "etagere" => || one("etagere"),
+        "vaisselier" => || one("vaisselier"),
+        _ => || one("feu"),
+    }
+}
+
+fn one(id: &str) -> Value {
+    json!({"commands": [{"command": "scout.meuble.create", "params": {"type": id}}]})
+}
+
+#[allow(dead_code)]
 fn bracket() -> Value {
     json!({"commands": [
         {"command": "sheet.manage_rules", "params": {"name": "Steel 2mm", "thickness": "2 mm", "bend_radius": "Thickness", "active": true}},
@@ -64,6 +79,7 @@ fn bracket() -> Value {
     ]})
 }
 
+#[allow(dead_code)]
 fn hinge() -> Value {
     let mut cmds = Vec::new();
     for name in ["Leaf A", "Leaf B"] {
@@ -85,6 +101,7 @@ fn hinge() -> Value {
     json!({ "commands": cmds })
 }
 
+#[allow(dead_code)]
 fn enclosure() -> Value {
     json!({"commands": [
         {"command": "solid.box", "params": {"length": 80, "width": 50, "height": 30, "body_name": "Enclosure"}},
@@ -97,6 +114,7 @@ fn enclosure() -> Value {
     ]})
 }
 
+#[allow(dead_code)]
 fn flange() -> Value {
     json!({"commands": [
         {"command": "parameters.change", "params": {"name": "bolts", "expression": "6", "unit": "", "comment": "number of bolt holes"}},
@@ -121,6 +139,7 @@ fn flange() -> Value {
     ]})
 }
 
+#[allow(dead_code)]
 fn vents() -> Value {
     json!({"commands": [
         {"command": "parameters.change", "params": {"name": "cols", "expression": "6", "unit": ""}},

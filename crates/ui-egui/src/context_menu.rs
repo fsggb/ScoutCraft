@@ -407,17 +407,20 @@ pub fn items(app: &SolveApp, target: &Target) -> Vec<Item> {
         Target::HistoryControls => crate::timeline::transport_items(app),
         Target::Workspace => {
             let rendering = crate::render_workspace::active(app);
-            let mut v = vec![
-                act("ui.workspace.design", "Design", "ws_design").with(json!({"workspace":"design"})).key(if rendering { "" } else { "current" }),
-                act("ui.workspace.render", "Render", "ws_render")
-                    .with(json!({"workspace":"render"}))
-                    .key(if rendering { "current" } else { "" })
-                    .on(app.session.active_sketch.is_none() && app.tool.is_none() && app.dialog.is_none() && !app.file_load.busy()),
-            ];
-            for (w, icon) in [("Animation", "ws_animate"), ("Simulation", ""), ("Manufacture", ""), ("Drawing", "ws_drawing")] {
-                v.push(act("ui.workspace", w, icon).key("coming later").on(false));
-            }
-            v
+            // SoLeadWorks: the design workspace and the workshops of CathIA (technical drawing, nomenclature),
+            // then the rendering; nothing that is only planned.
+            let (drawing, nomenclature) = (app.scout_win.dessin.is_some(), app.scout_win.nomen.is_some());
+            let idle = app.session.active_sketch.is_none() && app.tool.is_none() && app.dialog.is_none() && !app.file_load.busy();
+            vec![
+                act("ui.workspace.design", "Design", "ws_design")
+                    .with(json!({"workspace":"design"}))
+                    .key(if rendering || drawing || nomenclature { "" } else { "current" }),
+                act("ui.workspace.drawing", "Drawing", "scout_plan").with(json!({"workspace":"drawing"})).key(if drawing { "current" } else { "" }),
+                act("ui.workspace.nomenclature", "Nomenclature", "scout_nomenclature")
+                    .with(json!({"workspace":"nomenclature"}))
+                    .key(if nomenclature { "current" } else { "" }),
+                act("ui.workspace.render", "Render", "ws_render").with(json!({"workspace":"render"})).key(if rendering { "current" } else { "" }).on(idle),
+            ]
         }
         Target::Units => crate::prefs::UNITS
             .iter()
@@ -426,8 +429,10 @@ pub fn items(app: &SolveApp, target: &Target) -> Vec<Item> {
                 if app.session.doc.units == *u { item.key("current") } else { item }
             })
             .collect(),
+        // two mice only: the current one and CathIA's
         Target::Navigation => crate::prefs::NAV_PRESETS
             .iter()
+            .filter(|preset| preset.id == "fusion" || preset.id == crate::prefs::CATHIA_NAV)
             .map(|preset| {
                 let item = act("ui.navPreset", preset.translated_label(), "").with(json!({ "preset": preset.id }));
                 if app.preferences.nav == preset.id { item.key("current") } else { item }
@@ -1630,6 +1635,8 @@ pub fn run_item(app: &mut SolveApp, item: &Item, at: Pos2) {
                 app.set_status(e, true);
             }
         }
+        "ui.workspace.drawing" => crate::scout_ui::open_dessin(app),
+        "ui.workspace.nomenclature" => crate::scout_ui::open_nomenclature(app),
         "ui.workspace" | "ui.workspace.design" | "ui.workspace.render" => {
             if let Some(workspace) = p.get("workspace").and_then(Value::as_str)
                 && let Err(e) = crate::render_workspace::enter(app, workspace == "render")
