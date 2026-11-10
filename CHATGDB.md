@@ -5,19 +5,12 @@ depot: fsggb/ScoutCraft
 maj: 2026-11-10
 ---
 
-# ScoutCraft : applications créatives FSGGB
+# SoLeadWorks : conception 3D de meubles et de coins de patrouille
 
-Suite créative en ligne (anciennement ArtCraft), servie par GitHub Pages (https://fsggb.github.io/ScoutCraft/). Les versions web viennent des applications amont listées dans `apps.yml`, mises à jour chaque lundi. Aucun compte requis ; les fichiers restent sur l'ordinateur de l'utilisateur.
+Dépôt `ScoutCraft` (remplacé par SoLeadWorks). Application de conception 3D pour le camp scout, alternative « de fond » à CathIA (même objectif : le froissartage, avec bois rond, tenons, mi-bois, claies, brêlages), construite sur le noyau SolidCraft allégé (esquisses contraintes, historique paramétrique, assemblages, nomenclature). Dans ScoutHub : rubrique « Conception et CAO ».
 
-| Application | Équivalent d'usage | Adresse | Sert à |
-|---|---|---|---|
-| InDesign | mise en page | /ScoutCraft/InDesign/ | brochures, flyers, journaux |
-| Lightroom | développement photo | /ScoutCraft/Lightroom/ | trier et retoucher des photos |
-| Figma | interfaces et prototypes | /ScoutCraft/Figma/ | maquettes d'écrans |
-| After Effects | effets visuels | /ScoutCraft/AfterEffects/ | animations, compositing |
-| Pro Tools | studio audio | /ScoutCraft/ProTools/ | enregistrement et mixage |
-| Substance Painter | textures 3D | /ScoutCraft/SubstancePainter/ | peindre des textures sur des modèles 3D |
+- **Un meuble** donne un plan (vues cotées, liste de débit, assemblages, ordre de montage). **Un coin de patrouille** range plusieurs meubles au sol, avec une vue d'ensemble et un plan par meuble.
+- Onglets du ruban : Édition (annuler/rétablir, points de retour, déplacer, copier, symétrie, mesure, coupe) ; Créer (nouveau meuble : les 11 modèles de CathIA, réglables ; coin de patrouille ; traverse, équerre, plateau de claies, filet) ; Opérations (façonner : fendre, quart de bois, couper, pointe ; assemblages : tenon et mortaise, mi-bois, queue d'aronde, chevilles, brêlage) ; Formes ; Esquisse ; Plans (dessin technique A3/A4 avec cotes, cartouche, export SVG ; export HTML ; vue éclatée du montage) ; Nomenclature (pièces, assemblages, liste de matériel, export CSV).
+- Toutes les fonctions sont des commandes (ruban, palette de commandes, scripts, CLI).
 
-Word, Excel, PowerPoint, Acrobat, Photoshop, Illustrator et Premiere existent aussi ici, mais le portail renvoie vers ScoutOffice pour ceux-là.
-
-*À compléter : étapes pas à pas, questions fréquentes, particularités pour les scouts.*
+*À compléter : pas à pas pour construire un premier meuble, questions fréquentes, correspondance avec les modèles de CathIA.*
