@@ -81,7 +81,7 @@ pub const MODELS: &[Model] = &[
         name: "Table à pieds en X",
         category: "Tables et plans de travail",
         summary: "Deux paires de pieds croisés en mi-bois, deux lisses et un plateau de claies.",
-        params: &[TEN_SCIE, num("long", "Longueur du plateau (mm)", 1800.0), num("larg", "Largeur du plateau (mm)", 800.0), num("h", "Hauteur du dessus du plateau (mm)", 750.0), pick("mode", "Plateau", 0.0, &["Claies tressées (sous, sur, sous)", "Claies droites dans des quarts de bois", "Filet de ficelle (maille serrée)"]), num("maille", "Maille du filet (mm)", 30.0), num("dc", "Diamètre des claies (mm)", 20.0)],
+        params: &[TEN_SCIE, num("long", "Longueur du plateau (mm)", 1800.0), num("larg", "Largeur du plateau (mm)", 800.0), num("h", "Hauteur du dessus du plateau (mm)", 750.0), pick("mode", "Plateau", 0.0, &["Claies tressées (sous, sur, sous)", "Claies droites dans des quarts de bois", "Filet de ficelle (maille serrée)", "Quarts de bois jointifs"]), num("maille", "Maille du filet (mm)", 30.0), num("dc", "Diamètre des claies (mm)", 20.0)],
     },
     Model {
         id: "prepa",
@@ -299,14 +299,104 @@ fn legs4(b: &mut Build, d: f64, (x0, x1, y0, y1): (f64, f64, f64, f64), hs: [f64
     out
 }
 
-/// Straight claies across (along y) from x `xa` to `xb`, resting on top of rails at `z_top`.
-fn claies(b: &mut Build, (xa, xb): (f64, f64), (y0, y1): (f64, f64), z_top: f64, d: f64) {
-    let n = (((xb - xa) / (d * 1.4)).floor().max(1.0)) as usize;
-    let n = n.min(120);
-    for i in 0..n {
-        let x = xa + (xb - xa) * (i as f64 + 0.5) / n as f64;
-        b.bar("claie", d, v(x, y0, z_top + d / 2.0), v(x, y1, z_top + d / 2.0));
+/// How a plateau is filled between its two rails (CathIA's `plateauWin`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Fill {
+    /// claies woven under, over, under the two rails and a thin central one
+    Tresse,
+    /// straight claies lying on the rails
+    Droit,
+    /// a net of rope
+    Filet,
+    /// quarter-logs side by side
+    Quarts,
+}
+
+impl Fill {
+    pub fn from_index(i: usize) -> Fill {
+        match i {
+            0 => Fill::Tresse,
+            1 => Fill::Droit,
+            2 => Fill::Filet,
+            _ => Fill::Quarts,
+        }
     }
+    pub fn from_key(k: &str) -> Option<Fill> {
+        match k {
+            "tresse" => Some(Fill::Tresse),
+            "droit" => Some(Fill::Droit),
+            "filet" => Some(Fill::Filet),
+            "quarts" => Some(Fill::Quarts),
+            _ => None,
+        }
+    }
+}
+
+/// What a plateau needs besides its rectangle: the claie diameter, the net's mesh, the rails'
+/// diameter, where the claying starts (`c0`) and how long it runs (`cl`, 0 = to the end).
+#[derive(Clone, Copy, Debug)]
+pub struct FillOpts {
+    pub dc: f64,
+    pub maille: f64,
+    pub rail: f64,
+    pub c0: f64,
+    pub cl: f64,
+}
+
+/// Fills the rectangle `xs` × `ys`, resting on rails whose top is at `z_top` (the rails run along x
+/// at the two ends of `ys`; the claies run across along y). Under 150 pieces; no joints, so cheap.
+pub fn fill(b: &mut Build, mode: Fill, (xa, xb): (f64, f64), (y0, y1): (f64, f64), z_top: f64, o: FillOpts) -> Result<(), String> {
+    let (xa, xb) = (xa + o.c0.max(0.0), if o.cl > 0.0 { (xa + o.c0.max(0.0) + o.cl).min(xb) } else { xb });
+    if xb - xa < o.dc.max(10.0) {
+        return Err("plateau trop court pour la longueur clayée demandée".into());
+    }
+    let d = o.dc;
+    match mode {
+        Fill::Filet => {
+            net(b, (xa, xb, y0, y1), z_top + 2.0, o.maille);
+        }
+        Fill::Droit => {
+            let n = (((xb - xa) / (d * 1.4)).floor().max(1.0)) as usize;
+            let n = n.min(120);
+            for i in 0..n {
+                let x = xa + (xb - xa) * (i as f64 + 0.5) / n as f64;
+                b.bar("claie", d, v(x, y0, z_top + d / 2.0), v(x, y1, z_top + d / 2.0));
+            }
+        }
+        Fill::Quarts => {
+            let n = (((xb - xa) / (d * 0.6)).floor().max(1.0)) as usize;
+            let n = n.min(120);
+            for i in 0..n {
+                let x = xa + (xb - xa) * (i as f64 + 0.5) / n as f64;
+                let k = b.bar("quart de bois", d, v(x, y0, z_top + d / 2.0), v(x, y1, z_top + d / 2.0));
+                b.split(k, SplitMode::Quart)?;
+            }
+        }
+        Fill::Tresse => {
+            // a thin rail down the middle, and every claie goes under the outer rails and over the
+            // middle one, or the other way round: two straight bars, bent at the middle
+            let (ym, m, rail) = ((y0 + y1) / 2.0, d * 0.8, o.rail.max(d));
+            let zc = z_top - rail / 2.0;
+            b.bar("lien central", m, v(xa, ym, zc), v(xb, ym, zc));
+            let n = (((xb - xa) / (d * 1.5)).floor().max(1.0)) as usize;
+            let n = n.min(70);
+            let (up, down) = (z_top + d / 2.0, z_top - rail - d / 2.0);
+            let (over, under) = (zc + m / 2.0 + d / 2.0, zc - m / 2.0 - d / 2.0);
+            for i in 0..n {
+                let x = xa + (xb - xa) * (i as f64 + 0.5) / n as f64;
+                let (e, c) = if i % 2 == 0 { (up, under) } else { (down, over) };
+                b.bar("claie", d, v(x, y0, e), v(x, ym, c));
+                b.bar("claie", d, v(x, ym, c), v(x, y1, e));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Straight claies across (along y) from x `xa` to `xb`, resting on top of rails at `z_top`.
+fn claies(b: &mut Build, xs: (f64, f64), ys: (f64, f64), z_top: f64, d: f64) {
+    let o = FillOpts { dc: d, maille: 30.0, rail: 50.0, c0: 0.0, cl: 0.0 };
+    let _ = fill(b, Fill::Tresse, xs, ys, z_top, o);
 }
 
 /// A net of ropes (maille `m`) over a rectangle at height `z`.
@@ -489,10 +579,8 @@ fn table(b: &mut Build, p: &Params, ten: TenonOpts) -> Result<(), String> {
         b.tenon(c, l1, ten)?;
     }
     // a thin central rail holds the legs apart
-    match p.get("mode") as usize {
-        2 => net(b, (dc, l - dc, ya, yb), ztop + dl / 2.0, p.get("maille")),
-        _ => claies(b, (0.0, l), (0.0, w), ztop + dl / 2.0, dc),
-    }
+    let o = FillOpts { dc, maille: p.get("maille"), rail: dl, c0: 0.0, cl: 0.0 };
+    fill(b, Fill::from_index(p.get("mode") as usize), (0.0, l), (0.0, w), ztop + dl / 2.0, o)?;
     Ok(())
 }
 
@@ -557,10 +645,9 @@ fn etagere(b: &mut Build, p: &Params, ten: TenonOpts) -> Result<(), String> {
     for (z, kind) in [(h1, 0), (h2, 1), (h - dr, 2)] {
         let f = frame(b, ten, asm_of(p), bx, z, legs, dr, dr)?;
         let _ = f;
-        match kind {
-            2 => net(b, (0.0, l, 0.0, w), z + dr / 2.0, p.get("maille")),
-            _ => claies(b, (0.0, l), (0.0, w), z + dr / 2.0, dc),
-        }
+        let o = FillOpts { dc, maille: p.get("maille"), rail: dr, c0: 0.0, cl: 0.0 };
+        let mode = [Fill::Tresse, Fill::Quarts, Fill::Filet][kind];
+        fill(b, mode, (0.0, l), (0.0, w), z + dr / 2.0, o)?;
     }
     Ok(())
 }

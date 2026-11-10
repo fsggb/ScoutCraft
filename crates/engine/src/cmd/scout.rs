@@ -23,7 +23,7 @@ use crate::scout::models::{self, MODELS, Params};
 use crate::scout::dessin::{self, Cartouche, Format, Placed, SheetCfg, View};
 use crate::scout::nomenclature;
 use crate::scout::plan::{meuble_section, page_html, steps};
-use crate::scout::pole::{self, Build, End, MAX_POLES, Op, Pole, SplitMode, Style, TenonOpts, V3, cut_list, extent, joint_summary, wood_metres};
+use crate::scout::pole::{self, Build, End, MAX_POLES, Op, Pole, SplitMode, Style, TenonOpts, V3, add, cut_list, extent, joint_summary, mul, wood_metres};
 use crate::{EngineError, Result, Session};
 
 const P_POLE: &str = "scout_pole";
@@ -31,6 +31,19 @@ const P_KIND: &str = "scout_meuble";
 const P_PARAMS: &str = "scout_reglages";
 const P_PLACE: &str = "scout_place";
 const P_COIN: &str = "scout_coin";
+/// The pole as it was before the first joint or shaping made on it (the point a rebuild restarts from).
+const P_BASE: &str = "scout_base";
+/// The design's own key: the joints and shapings made, in order, so a changed pole can have them redone.
+const K_RECIPES: &str = "fr.soleadworks.recettes";
+/// On a pole built without its hidden joints (the quick way): how many of its first operations are
+/// still to be cut (see `detail`).
+const P_FAST: &str = "scout_rapide";
+
+/// Joints that cannot be seen from outside (the tenon in its mortise, a peg's hole): the quick way
+/// leaves them out of the geometry and `scout.meuble.detail` cuts them when asked.
+fn hidden(op: &Op) -> bool {
+    matches!(op, Op::Tenon { .. } | Op::Mortise { .. } | Op::Hole { .. } | Op::Saddle { .. })
+}
 
 pub static COMMANDS: &[CommandSpec] = &[
     CommandSpec::new("scout.meuble.types", "Modèles de meubles", |_, _| Ok(types())).icon("library").noundo().doc_only().params(
@@ -68,14 +81,22 @@ pub static COMMANDS: &[CommandSpec] = &[
         .at("SCOUT", "PIÈCES")
         .icon("scout_equerre")
         .params("unit?: mm for the 3-4-5 (default 300: poles of 0.9, 1.2 and 1.5 m); d?: pole Ø mm (default 50); at?: [x, y]"),
-    CommandSpec::new("scout.piece.claies", "Plateau de claies", |s, p| atomic(s, |c| piece_claies(c, p)))
+    CommandSpec::new("scout.meuble.detail", "Détailler les assemblages", |s, p| atomic(s, |c| detail_cmd(c, p)))
+        .at("SCOUT", "MEUBLES")
+        .icon("scout_tenon")
+        .params("meuble?: name or id (default: all); cuts the tenons, mortises and peg holes left out of the furniture built the quick way (slow: seconds per joint)"),
+    CommandSpec::new("scout.meuble.modifier", "Modifier le meuble", |s, p| atomic(s, |c| meuble_modifier(c, p)))
+        .at("SCOUT", "MEUBLES")
+        .icon("scout_equerre")
+        .params("meuble?: name or id; any setting of its model (see scout.meuble.types), alone or under params → builds it again in place and redoes the joints made on its pieces since (one undo step)"),
+    CommandSpec::new("scout.piece.modifier", "Modifier une pièce", |s, p| atomic(s, |c| modifier(c, p)))
+        .at("SCOUT", "PIÈCES")
+        .icon("scout_traverse")
+        .params("piece: name or id; diameter?, length?: mm; dx?, dy?, dz?: move in mm → rebuilds the piece and every joint that depends on it (one undo step)"),
+    CommandSpec::new("scout.plateau", "Plateau", |s, p| atomic(s, |c| piece_plateau(c, p)))
         .at("SCOUT", "PIÈCES")
         .icon("scout_claies")
-        .params("long?, larg?: mm (default 1000 × 600); dc?: claie Ø mm (default 20); z?: height of the bottom mm; at?: [x, y]"),
-    CommandSpec::new("scout.piece.filet", "Filet de ficelle", |s, p| atomic(s, |c| piece_filet(c, p)))
-        .at("SCOUT", "PIÈCES")
-        .icon("scout_filet")
-        .params("long?, larg?: mm (default 1000 × 600); maille?: mm (default 30); z?: height mm; at?: [x, y]"),
+        .params("mode?: tresse|droit|filet|quarts (default tresse); long?, larg?: mm (default 1000 × 600); dc?: claie Ø mm (20); dr?: rail Ø mm (40); maille?: mm (30); c0?: start of the claying mm; cl?: claied length mm (0 = to the end); z?: height of the bottom mm; at?: [x, y]"),
     CommandSpec::new("scout.profil.tube_rond", "Tube rond", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "tube_rond")))).icon("cylinder").params("see scout.profil"),
     CommandSpec::new("scout.profil.tube_carre", "Tube carré", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "tube_carre")))).icon("box").params("see scout.profil"),
     CommandSpec::new("scout.profil.corniere", "Cornière", |s, p| atomic(s, |c| piece_profil(c, &with_kind(p, "corniere")))).icon("box").params("see scout.profil"),
@@ -129,7 +150,22 @@ fn types() -> Value {
 }
 
 fn run(s: &mut Session, id: &str, p: Value) -> Result<Value> {
-    s.execute(id, &p)
+    let t = std::time::Instant::now();
+    let r = s.execute(id, &p);
+    #[cfg(test)]
+    PROFILE.with(|m| {
+        let mut m = m.borrow_mut();
+        let e = m.entry(id.to_string()).or_insert((0, 0));
+        e.0 += 1;
+        e.1 += t.elapsed().as_millis();
+    });
+    let _ = t;
+    r
+}
+
+#[cfg(test)]
+thread_local! {
+    pub static PROFILE: std::cell::RefCell<std::collections::BTreeMap<String, (u32, u128)>> = const { std::cell::RefCell::new(std::collections::BTreeMap::new()) };
 }
 
 fn id_of(v: &Value, key: &str) -> u64 {
@@ -205,13 +241,21 @@ fn tool_name(name: &str) -> String {
 /// A new body for a tool, then `solid.combine` of it into the pole's body: the interface's own
 /// Boolean, so every tenon, mortise, notch and split is a Combine in the history.
 fn combine(s: &mut Session, name: &str, tool: &str, operation: &str) -> Result<()> {
+    let t = std::time::Instant::now();
     run(s, "solid.combine", json!({"target": name, "tools": [tool], "operation": operation}))?;
+    #[cfg(test)]
+    eprintln!("  combine {operation} {name} <- {tool}: {} ms", t.elapsed().as_millis());
+    let _ = t;
     Ok(())
 }
 
 /// The same, but the tool is another pole's body and stays.
 fn combine_keep(s: &mut Session, name: &str, tool: &str, operation: &str) -> Result<()> {
+    let t = std::time::Instant::now();
     run(s, "solid.combine", json!({"target": name, "tools": [tool], "operation": operation, "keep_tools": true}))?;
+    #[cfg(test)]
+    eprintln!("  combine_keep {operation} {name} <- {tool}: {} ms", t.elapsed().as_millis());
+    let _ = t;
     Ok(())
 }
 
@@ -406,7 +450,7 @@ fn dominant(v: V3) -> usize {
 }
 
 /// Makes the component of one pole under `parent`, builds and places it, saves its record.
-fn make_pole(s: &mut Session, parent: u64, kind: &str, name: &str, pole: &Pole) -> Result<(u64, u64)> {
+fn make_pole(s: &mut Session, parent: u64, kind: &str, name: &str, pole: &Pole, detail: bool) -> Result<(u64, u64)> {
     let c = run(s, "component.create", json!({"name": name, "parent": parent, "grounded": false}))?;
     let (comp, occ) = (id_of(&c, "component"), id_of(&c, "occurrence"));
     let (z0, z1) = pole.built_range();
@@ -415,11 +459,14 @@ fn make_pole(s: &mut Session, parent: u64, kind: &str, name: &str, pole: &Pole) 
     } else {
         run(s, "solid.cylinder", json!({"base": [0.0, 0.0, z0], "axis": [0.0, 0.0, 1.0], "diameter": pole.diameter, "height": z1 - z0, "body_name": name}))?;
     }
-    for op in pole.ops.iter().filter(|o| !matches!(o, Op::Saddle { .. })) {
+    for op in pole.ops.iter().filter(|o| !matches!(o, Op::Saddle { .. }) && (detail || !hidden(o))) {
         apply_op(s, name, pole, op)?;
     }
     run(s, "occurrence.move", json!({"occurrence": occ, "matrix": pole.matrix(), "capture": true, "move_grounded": true}))?;
     save_pole(s, comp, kind, pole)?;
+    if !detail && pole.ops.iter().any(hidden) {
+        run(s, "component.metadata.set", json!({"component": comp, "properties": {P_FAST: pole.ops.len().to_string()}}))?;
+    }
     run(s, "component.activate", json!({"component": parent}))?;
     Ok((comp, occ))
 }
@@ -435,7 +482,22 @@ fn fit_saddles(s: &mut Session, kind: &str, comps: &[(u64, String)], poles: &mut
             let Some((_, target)) = comps.get(j) else { continue };
             let Some((comp, name)) = comps.get(i) else { continue };
             run(s, "component.activate", json!({"component": *comp}))?;
-            combine_keep(s, name, target, "cut")?;
+            let recv = poles[j].clone();
+            if recv.width == 0.0 {
+                // A plain cylinder of the receiving pole is a far lighter cutter than its body (with
+                // all its mortises): cut with it, then put the tenons back, which it also took.
+                let (z0, z1) = recv.built_range();
+                let base = poles[i].local(add(recv.origin, mul(recv.dir, z0)));
+                let axis = poles[i].local_dir(recv.dir);
+                let tool = tool_name(name);
+                tool_cylinder(s, &tool, base, axis, recv.diameter, z1 - z0)?;
+                combine(s, name, &tool, "cut")?;
+                for op in poles[i].ops.clone().iter().filter(|o| matches!(o, Op::Tenon { .. })) {
+                    apply_op(s, name, &poles[i], op)?;
+                }
+            } else {
+                combine_keep(s, name, target, "cut")?;
+            }
             poles[i].ops[k] = Op::Saddle { with: target.clone(), end, extra };
             changed = true;
         }
@@ -507,6 +569,7 @@ fn create_meuble(s: &mut Session, p: &Value) -> Result<Value> {
     let rotation = rotation_of(cmd, p)?;
     let at = p.get("at").map(|v| vec2(v).ok_or_else(|| bad(cmd, "`at` is [x, y] in mm"))).transpose()?;
     let coin = coin_param(s, p, cmd)?;
+    let detail = bool_p(p, "detail", false);
     let name = free_name(s, str_(p, "name").map(str::trim).filter(|n| !n.is_empty()).unwrap_or(m.name));
     let active = s.active_component;
     let top = run(s, "component.create", json!({"name": name, "parent": coin.unwrap_or(0), "grounded": false}))?;
@@ -518,10 +581,12 @@ fn create_meuble(s: &mut Session, p: &Value) -> Result<Value> {
         let n = counts.entry(pole.role.clone()).or_insert(0);
         *n += 1;
         let part = format!("{} {} {}", pole.role, n, name);
-        let (pc, _) = make_pole(s, comp, &kind, &part, pole)?;
+        let (pc, _) = make_pole(s, comp, &kind, &part, pole, detail)?;
         comps.push((pc, part));
     }
-    fit_saddles(s, &kind, &comps, &mut poles)?;
+    if detail {
+        fit_saddles(s, &kind, &comps, &mut poles)?;
+    }
     let (x, y) = at.map_or((0.0, 0.0), |v| (v.x, v.y));
     run(
         s,
@@ -572,6 +637,45 @@ fn create_coin(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"component": coin, "name": name, "meubles": placed}))
 }
 
+/// Cuts the hidden joints (tenons, mortises, peg holes) of the furniture built the quick way.
+fn detail_cmd(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.meuble.detail";
+    let root = if p.get("meuble").is_some_and(|v| !v.is_null()) { Some(component_id(s, &p["meuble"], cmd)?) } else { None };
+    let under = |s: &Session, mut c: u64, root: u64| loop {
+        if c == root {
+            return true;
+        }
+        match s.doc.components.iter().find(|k| k.id == c) {
+            Some(k) if k.parent != c => c = k.parent,
+            _ => return false,
+        }
+    };
+    let todo: Vec<(u64, usize, Pole)> = s
+        .doc
+        .components
+        .iter()
+        .filter(|c| root.is_none_or(|r| under(s, c.id, r)))
+        .filter_map(|c| {
+            let n: usize = c.properties.get(P_FAST)?.parse().ok()?;
+            let pole: Pole = serde_json::from_str(c.properties.get(P_POLE)?).ok()?;
+            Some((c.id, n, pole))
+        })
+        .collect();
+    let active = s.active_component;
+    let mut cuts = 0;
+    for (comp, n, pole) in &todo {
+        let name = name_of(s, *comp);
+        run(s, "component.activate", json!({"component": *comp}))?;
+        for op in pole.ops.iter().take(*n).filter(|o| hidden(o) && !matches!(o, Op::Saddle { .. })) {
+            apply_op(s, &name, pole, op)?;
+            cuts += 1;
+        }
+        run(s, "component.metadata.set", json!({"component": *comp, "properties": {P_FAST: ""}}))?;
+    }
+    run(s, "component.activate", json!({"component": active}))?;
+    Ok(json!({"pieces": todo.len(), "operations": cuts}))
+}
+
 // ---- joints and shaping on poles already in the design ----------------------------------------
 
 /// What changed on a pole between `old` and `new`: the cut that takes off what was trimmed, then the
@@ -609,8 +713,209 @@ fn update_pole(s: &mut Session, comp: u64, old: &Pole, new: &Pole) -> Result<usi
 fn add_pole(s: &mut Session, beside: u64, pole: &Pole) -> Result<String> {
     let parent = s.doc.components.iter().find(|c| c.id == beside).map_or(0, |c| c.parent);
     let name = free_name(s, &format!("{} {}", pole.role, name_of(s, beside)));
-    make_pole(s, parent, "AJOUT", &name, pole)?;
+    make_pole(s, parent, "AJOUT", &name, pole, true)?;
     Ok(name)
+}
+
+/// The recipes of the design, in the order they were made.
+fn recipes(s: &Session) -> Vec<Value> {
+    s.doc.metadata.get(K_RECIPES).and_then(|v| v.get("recettes")).and_then(Value::as_array).cloned().unwrap_or_default()
+}
+
+fn set_recipes(s: &mut Session, list: &[Value]) -> Result<()> {
+    run(s, "document.metadata.set", json!({"key": K_RECIPES, "value": {"recettes": list}}))?;
+    Ok(())
+}
+
+/// Remembers a joint or a shaping just made (`cmd`, its parameters with the pieces by name, the
+/// poles it created) and the base of each pole it touched, unless it is itself a replay.
+fn record_recipe(s: &mut Session, cmd: &str, p: &Value, touched: &[(&str, u64, &Pole)], created: &[String]) -> Result<()> {
+    let mut q = p.clone();
+    let mut pieces = Vec::new();
+    for (key, id, old) in touched {
+        let name = name_of(s, *id);
+        q[*key] = json!(name);
+        pieces.push(name);
+        let has_base = s.doc.components.iter().any(|c| c.id == *id && c.properties.contains_key(P_BASE));
+        if !has_base {
+            let base = serde_json::to_string(old).map_err(|x| e(x.to_string()))?;
+            run(s, "component.metadata.set", json!({"component": *id, "properties": {P_BASE: base}}))?;
+        }
+    }
+    if p.get("_replay").is_some() {
+        return Ok(());
+    }
+    let mut list = recipes(s);
+    if list.len() >= 500 {
+        return Err(e("plus de 500 assemblages : fusionnez ou simplifiez avant d'en ajouter".into()));
+    }
+    list.push(json!({"c": cmd, "p": q, "pieces": pieces, "created": created}));
+    set_recipes(s, &list)
+}
+
+/// Every piece joined to `start` by a recipe, directly or not (and `start`).
+fn cluster(list: &[Value], start: &str) -> Vec<String> {
+    let mut seen = vec![start.to_string()];
+    loop {
+        let before = seen.len();
+        for r in list {
+            let names: Vec<String> = r["pieces"].as_array().map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect()).unwrap_or_default();
+            if names.iter().any(|n| seen.contains(n)) {
+                for n in names {
+                    if !seen.contains(&n) {
+                        seen.push(n);
+                    }
+                }
+            }
+        }
+        if seen.len() == before {
+            return seen;
+        }
+    }
+}
+
+/// Rebuilds the pieces `names` from their bases (the first of them changed by `edit`) and does their
+/// joints and shapings again: what makes a change to one piece reach every joint that depends on it.
+fn rebuild(s: &mut Session, names: &[String], edit: impl Fn(&str, &mut Pole)) -> Result<(usize, Vec<String>)> {
+    let list = recipes(s);
+    struct Member {
+        name: String,
+        parent: u64,
+        kind: String,
+        base: Pole,
+        quick: bool,
+    }
+    let mut members = Vec::new();
+    for n in names {
+        let c = s.doc.components.iter().find(|c| c.name == *n).ok_or_else(|| e(format!("« {n} » n'existe plus")))?;
+        let rec = c.properties.get(P_BASE).or_else(|| c.properties.get(P_POLE)).ok_or_else(|| e(format!("« {n} » n'est pas une perche de SoLeadWorks")))?;
+        let mut base: Pole = serde_json::from_str(rec).map_err(|x| e(x.to_string()))?;
+        edit(n, &mut base);
+        let kind = c.metadata.get("part_number").and_then(|v| v.as_str()).and_then(|t| t.split('-').next()).unwrap_or("PIECE").to_string();
+        members.push(Member { name: n.clone(), parent: c.parent, kind, base, quick: c.properties.contains_key(P_FAST) });
+    }
+    // the poles those joints made (pegs, lashings) go too: the replay makes them again
+    let touching: Vec<&Value> = list.iter().filter(|r| r["pieces"].as_array().is_some_and(|a| a.iter().any(|v| v.as_str().is_some_and(|x| names.iter().any(|n| n == x))))).collect();
+    let mut gone: Vec<String> = touching.iter().flat_map(|r| r["created"].as_array().cloned().unwrap_or_default()).filter_map(|v| v.as_str().map(str::to_string)).collect();
+    gone.extend(names.iter().cloned());
+    for n in &gone {
+        if let Some(id) = s.doc.components.iter().find(|c| c.name == *n).map(|c| c.id) {
+            run(s, "component.delete", json!({"component": id}))?;
+        }
+    }
+    for m in &members {
+        let (comp, _) = make_pole(s, m.parent, &m.kind, &m.name, &m.base, !m.quick)?;
+        // the base stays what it was, with the change
+        let rec = serde_json::to_string(&m.base).map_err(|x| e(x.to_string()))?;
+        run(s, "component.metadata.set", json!({"component": comp, "properties": {P_BASE: rec}}))?;
+    }
+    let mut failed = Vec::new();
+    let mut fresh = Vec::new();
+    for r in &touching {
+        let mut q = r["p"].clone();
+        q["_replay"] = json!(true);
+        let result = match r["c"].as_str() {
+            Some("assemblage") => assemblage(s, &q),
+            Some("faconner") => faconner(s, &q),
+            _ => continue,
+        };
+        match result {
+            Ok(v) => fresh.push(((*r).clone(), v)),
+            Err(x) => failed.push(format!("{} : {x}", r["p"]["kind"].as_str().unwrap_or("assemblage"))),
+        }
+    }
+    // the recipes keep the new names of what they created
+    let mut all = list.clone();
+    for (old, v) in &fresh {
+        if let Some(slot) = all.iter_mut().find(|r| *r == old) {
+            slot["created"] = v["created"].clone();
+        }
+    }
+    set_recipes(s, &all)?;
+    Ok((members.len(), failed))
+}
+
+/// Changes one pole (its diameter, its length, its place) and redoes every joint that depends on it.
+fn modifier(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.piece.modifier";
+    let (id, pole) = piece(s, p, "piece", cmd)?;
+    let name = name_of(s, id);
+    let d = bounded(cmd, p, "diameter", pole.diameter, 10.0, 600.0)?;
+    let len = bounded(cmd, p, "length", pole.length, 20.0, 6000.0)?;
+    let dx = bounded(cmd, p, "dx", 0.0, -10_000.0, 10_000.0)?;
+    let dy = bounded(cmd, p, "dy", 0.0, -10_000.0, 10_000.0)?;
+    let dz = bounded(cmd, p, "dz", 0.0, -10_000.0, 10_000.0)?;
+    let names = cluster(&recipes(s), &name);
+    let (count, failed) = rebuild(s, &names, |n, b| {
+        if n == name {
+            b.diameter = d;
+            if p.get("length").is_some_and(|v| !v.is_null()) {
+                b.length = len;
+            }
+            b.origin = add(b.origin, [dx, dy, dz]);
+        }
+    })?;
+    Ok(json!({"piece": name, "rebuilt": count, "pieces": names, "failed": failed}))
+}
+
+/// Changes the settings of a furniture (its length, its leg diameter…) and builds it again in the
+/// same place, then redoes the joints and shapings made on its pieces since.
+fn meuble_modifier(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.meuble.modifier";
+    let id = pick(s, p, "meuble", P_KIND, "furniture", cmd)?;
+    let c = s.doc.components.iter().find(|c| c.id == id).ok_or_else(|| bad(cmd, "no such furniture"))?;
+    let (kind, name) = (c.properties.get(P_KIND).cloned().unwrap_or_default(), c.name.clone());
+    let parent = c.parent;
+    let m = models::model(&kind).ok_or_else(|| bad(cmd, format!("unknown furniture `{kind}`")))?;
+    let mut merged: serde_json::Map<String, Value> = c.properties.get(P_PARAMS).and_then(|t| serde_json::from_str(t).ok()).unwrap_or_default();
+    for src in [Some(p), p.get("params")].into_iter().flatten() {
+        if let Some(o) = src.as_object() {
+            for d in m.params {
+                if let Some(x) = o.get(d.key).filter(|x| !x.is_null()) {
+                    merged.insert(d.key.to_string(), x.clone());
+                }
+            }
+        }
+    }
+    let place: Vec<f64> = c.properties.get(P_PLACE).map(|t| t.split('|').filter_map(|x| x.parse().ok()).collect()).unwrap_or_default();
+    let (x, y, rot) = match place.as_slice() {
+        [x, y, r] => (*x, *y, *r),
+        _ => (0.0, 0.0, 0.0),
+    };
+    let coin = s.doc.components.iter().any(|k| k.id == parent && k.properties.contains_key(P_COIN)).then_some(parent);
+    let detail = !s.doc.components.iter().any(|k| k.parent == id && k.properties.contains_key(P_FAST));
+    let old_names: Vec<String> = s.doc.components.iter().filter(|k| k.parent == id).map(|k| k.name.clone()).collect();
+    run(s, "component.delete", json!({"component": id}))?;
+    let mut q = json!({"type": kind, "name": name, "at": [x, y], "rotation": rot, "params": merged, "detail": detail});
+    if let Some(cn) = coin {
+        q["coin"] = json!(cn);
+    }
+    let made = create_meuble(s, &q)?;
+    // what the user joined on its pieces since: done again wherever the pieces still exist
+    let mut failed = Vec::new();
+    let mut redone = 0;
+    for r in recipes(s) {
+        let pieces: Vec<String> = r["pieces"].as_array().map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect()).unwrap_or_default();
+        if !pieces.iter().any(|n| old_names.contains(n)) {
+            continue;
+        }
+        if !pieces.iter().all(|n| s.doc.components.iter().any(|c| c.name == *n)) {
+            failed.push(format!("{} : une pièce n'existe plus dans le nouveau meuble", r["p"]["kind"].as_str().unwrap_or("assemblage")));
+            continue;
+        }
+        let mut qq = r["p"].clone();
+        qq["_replay"] = json!(true);
+        let result = match r["c"].as_str() {
+            Some("assemblage") => assemblage(s, &qq),
+            Some("faconner") => faconner(s, &qq),
+            _ => continue,
+        };
+        match result {
+            Ok(_) => redone += 1,
+            Err(x) => failed.push(format!("{} : {x}", r["p"]["kind"].as_str().unwrap_or("assemblage"))),
+        }
+    }
+    Ok(json!({"meuble": made["component"], "name": name, "poles": made["poles"], "redone": redone, "failed": failed}))
 }
 
 fn style_of(kind: &str) -> Option<(Style, bool)> {
@@ -647,6 +952,7 @@ fn assemblage(s: &mut Session, p: &Value) -> Result<Value> {
                 o.w = num(p, "w").unwrap_or(0.0);
                 o.theta = num(p, "theta").unwrap_or(if style == Style::Aronde { 20.0 } else { 0.0 });
                 o.through = through || p.get("through").and_then(Value::as_bool).unwrap_or(false);
+                o.saddle = p.get("gueule").and_then(Value::as_bool).unwrap_or(false);
                 o.typ = match other {
                     "aronde2" => 2,
                     "aronde3" => 3,
@@ -677,6 +983,7 @@ fn assemblage(s: &mut Session, p: &Value) -> Result<Value> {
     for extra in build.poles.iter().skip(2) {
         created.push(add_pole(s, ia, extra)?);
     }
+    record_recipe(s, "assemblage", p, &[("a", ia, &oa), ("b", ib, &ob)], &created)?;
     Ok(json!({"kind": kind, "a": name_of(s, ia), "b": name_of(s, ib), "changed": changed, "created": created}))
 }
 
@@ -714,6 +1021,7 @@ fn faconner(s: &mut Session, p: &Value) -> Result<Value> {
     }
     .map_err(|m| bad(cmd, m))?;
     let changed = update_pole(s, id, &old, &new)?;
+    record_recipe(s, "faconner", p, &[("piece", id, &old)], &[])?;
     Ok(json!({"kind": kind, "piece": name_of(s, id), "changed": changed, "length": new.length}))
 }
 
@@ -726,7 +1034,7 @@ fn loose(s: &mut Session, name: &str, kind: &str, poles: &[Pole], at: Option<V3>
     let top = run(s, "component.create", json!({"name": name, "parent": 0, "grounded": false}))?;
     let (comp, occ) = (id_of(&top, "component"), id_of(&top, "occurrence"));
     for (i, pole) in poles.iter().enumerate() {
-        make_pole(s, comp, kind, &format!("{} {} {}", pole.role, i + 1, name), pole)?;
+        make_pole(s, comp, kind, &format!("{} {} {}", pole.role, i + 1, name), pole, true)?;
     }
     if let Some(a) = at {
         run(s, "occurrence.move", json!({"occurrence": occ, "matrix": [1.0, 0.0, 0.0, a[0], 0.0, 1.0, 0.0, a[1], 0.0, 0.0, 1.0, a[2]], "capture": true, "move_grounded": true}))?;
@@ -767,7 +1075,7 @@ fn piece_traverse(s: &mut Session, p: &Value) -> Result<Value> {
     let name = str_(p, "name").map(str::trim).filter(|n| !n.is_empty()).unwrap_or("Traverse");
     let name = free_name(s, name);
     let active = s.active_component;
-    let (comp, _) = make_pole(s, 0, "TRAVERSE", &name, &pole)?;
+    let (comp, _) = make_pole(s, 0, "TRAVERSE", &name, &pole, true)?;
     run(s, "component.activate", json!({"component": active}))?;
     Ok(json!({"component": comp, "name": name}))
 }
@@ -791,39 +1099,30 @@ fn piece_equerre(s: &mut Session, p: &Value) -> Result<Value> {
     loose(s, "Équerre", "EQUERRE", &b.poles, None)
 }
 
-fn piece_claies(s: &mut Session, p: &Value) -> Result<Value> {
-    let cmd = "scout.piece.claies";
+/// A plateau: two rails along x and the fill between them, in one of CathIA's forms.
+fn piece_plateau(s: &mut Session, p: &Value) -> Result<Value> {
+    let cmd = "scout.plateau";
+    let mode = match str_(p, "mode") {
+        None => models::Fill::Tresse,
+        Some(k) => models::Fill::from_key(k).ok_or_else(|| bad(cmd, "`mode` is tresse, droit, filet or quarts"))?,
+    };
     let (l, w) = (bounded(cmd, p, "long", 1000.0, 100.0, 5000.0)?, bounded(cmd, p, "larg", 600.0, 100.0, 5000.0)?);
-    let dc = bounded(cmd, p, "dc", 20.0, 8.0, 80.0)?;
+    let o = models::FillOpts {
+        dc: bounded(cmd, p, "dc", 20.0, 8.0, 80.0)?,
+        maille: bounded(cmd, p, "maille", 30.0, 10.0, 300.0)?.max((l + w) / 160.0),
+        rail: bounded(cmd, p, "dr", 40.0, 20.0, 150.0)?,
+        c0: bounded(cmd, p, "c0", 0.0, 0.0, 4900.0)?,
+        cl: bounded(cmd, p, "cl", 0.0, 0.0, 5000.0)?,
+    };
     let z = bounded(cmd, p, "z", 0.0, 0.0, 3000.0)?;
     let at = at_of(cmd, p)?.unwrap_or([0.0; 3]);
-    let n = ((l / (dc * 1.4)).floor().clamp(1.0, 150.0)) as usize;
-    let poles: Vec<Pole> = (0..n)
-        .map(|i| {
-            let x = at[0] + l * (i as f64 + 0.5) / n as f64;
-            Pole::bar("claie", dc, [x, at[1], z + dc / 2.0], [x, at[1] + w, z + dc / 2.0])
-        })
-        .collect();
-    loose(s, "Plateau de claies", "CLAIES", &poles, None)
-}
-
-fn piece_filet(s: &mut Session, p: &Value) -> Result<Value> {
-    let cmd = "scout.piece.filet";
-    let (l, w) = (bounded(cmd, p, "long", 1000.0, 100.0, 5000.0)?, bounded(cmd, p, "larg", 600.0, 100.0, 5000.0)?);
-    let maille = bounded(cmd, p, "maille", 30.0, 10.0, 300.0)?.max((l + w) / 160.0);
-    let z = bounded(cmd, p, "z", 0.0, 0.0, 3000.0)?;
-    let at = at_of(cmd, p)?.unwrap_or([0.0; 3]);
-    let (nx, ny) = ((l / maille).floor().max(1.0) as usize, (w / maille).floor().max(1.0) as usize);
-    let mut poles = Vec::new();
-    for i in 0..=nx {
-        let x = at[0] + l * i as f64 / nx as f64;
-        poles.push(Pole::bar("ficelle", 4.0, [x, at[1], z], [x, at[1] + w, z]));
+    let mut b = Build::default();
+    let zr = z + o.rail / 2.0;
+    for y in [at[1], at[1] + w] {
+        b.bar("lisse", o.rail, [at[0], y, zr], [at[0] + l, y, zr]);
     }
-    for j in 0..=ny {
-        let y = at[1] + w * j as f64 / ny as f64;
-        poles.push(Pole::bar("ficelle", 4.0, [at[0], y, z + 4.0], [at[0] + l, y, z + 4.0]));
-    }
-    loose(s, "Filet de ficelle", "FILET", &poles, None)
+    models::fill(&mut b, mode, (at[0], at[0] + l), (at[1], at[1] + w), zr + o.rail / 2.0, o).map_err(|x| bad(cmd, x))?;
+    loose(s, "Plateau", "PLATEAU", &b.poles, None)
 }
 
 // ---- reading back, plans and the HTML page -----------------------------------------------------

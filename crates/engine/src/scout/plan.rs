@@ -141,3 +141,21 @@ mod tests {
         assert!(!steps(&poles_of("table")).is_empty() && wood_metres(&[]) == 0.0);
     }
 }
+
+#[cfg(test)]
+mod thumbnails {
+    use super::*;
+    use crate::scout::models::{MODELS, Params, build};
+
+    /// Writes each model's isometric picture as `<dir>/<id>.svg` (the start page's pictures are made
+    /// from these): `SCOUT_THUMBS=/some/dir cargo test -p solidcraft-engine --lib -- --ignored thumbnails`.
+    #[test]
+    #[ignore = "writes files; run by hand to refresh the start page's pictures"]
+    fn write_the_start_page_pictures() {
+        let Ok(dir) = std::env::var("SCOUT_THUMBS") else { return };
+        for m in MODELS {
+            let poles = build(m.id, &Params::of(m)).unwrap_or_default();
+            let _ = std::fs::write(format!("{dir}/{}.svg", m.id), iso_svg(&poles));
+        }
+    }
+}

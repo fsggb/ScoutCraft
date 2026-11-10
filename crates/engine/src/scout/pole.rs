@@ -254,11 +254,13 @@ pub struct TenonOpts {
     pub theta: f64,
     /// Dovetail kind: 1 classic, 2 through (comes out the other side), 3 along the receiving pole's axis.
     pub typ: u8,
+    /// Cut the tenon pole's end to the curve of the receiving round pole (a wolf's mouth): slow.
+    pub saddle: bool,
 }
 
 impl TenonOpts {
     pub fn new(style: Style) -> Self {
-        TenonOpts { style, through: false, d: 0.0, w: 0.0, theta: 15.0, typ: 1 }
+        TenonOpts { style, through: false, d: 0.0, w: 0.0, theta: 15.0, typ: 1, saddle: false }
     }
     pub fn through(mut self) -> Self {
         self.through = true;
@@ -360,11 +362,14 @@ impl Build {
         let wide = if aronde && o.typ == 3 { 1 - near } else { near };
         let typ = if aronde { o.typ.clamp(1, 3) } else { 1 };
         self.poles[t].push(Op::Tenon { end, style: o.style, d, w, len: tlen, wide, theta, typ })?;
-        if pr.width == 0.0 && ptn.width == 0.0 {
+        if o.saddle && pr.width == 0.0 && ptn.width == 0.0 {
             // the end of `t` is cut to the curve of `r`, so the two meet without a gap or an overlap
             let rt = ptn.radius();
-            let far = (r_in * r_in - (off.abs() + rt).powi(2)).max(0.0).sqrt();
-            let extra = ((r_in - far) / sin + 2.0).min(chord * 0.9);
+            let big_r = pr.radius();
+            let far = (big_r * big_r - (off.abs() + rt).powi(2)).max(0.0).sqrt();
+            // never longer than the wood there is: an end that came out of a split log's flat face
+            // would be left as a loose disc
+            let extra = ((r_in - far) / sin + 2.0).min(chord * 0.9).min(avail - 3.0).max(0.0);
             self.poles[t].push(Op::Saddle { with: format!("#{r}"), end, extra })?;
         }
         // The mortise: on `t`'s line, from just outside the surface of `r`.

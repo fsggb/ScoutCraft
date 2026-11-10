@@ -32,7 +32,7 @@ pub fn tab_name(tab: &str) -> String {
     crate::i18n::tr_label(&cased).to_string()
 }
 
-pub const TABS: &[&str] = &["ÉDITION", "CRÉER", "OPÉRATIONS", "FORMES", "ESQUISSE"];
+pub const TABS: &[&str] = &["CRÉER", "OPÉRATIONS", "ÉDITION"];
 
 /// Reading order of the compact, three-column constraint gallery. Icons come from each spec.
 pub const CONSTRAINT_GALLERY: &[&str] = &[
@@ -123,7 +123,7 @@ pub const SECTIONS: &[Section] = &[
     Section { tab: "ÉDITION", panel: "CONTRÔLE", promoted: 3, ids: &["inspect.interference", "inspect.measure", "inspect.section"] },
     Section { tab: "ÉDITION", panel: "DÉPLACEMENT", promoted: 1, ids: &["occurrence.move"] },
     Section { tab: "CRÉER", panel: "MEUBLES", promoted: 2, ids: &["scout.meuble.create", "scout.coin.create"] },
-    Section { tab: "CRÉER", panel: "PIÈCES", promoted: 4, ids: &["scout.piece.traverse", "scout.piece.equerre", "scout.piece.claies", "scout.piece.filet"] },
+    Section { tab: "CRÉER", panel: "PIÈCES", promoted: 3, ids: &["scout.piece.traverse", "scout.piece.equerre", "scout.plateau"] },
     Section {
         tab: "OPÉRATIONS",
         panel: "FAÇONNER",
@@ -136,32 +136,14 @@ pub const SECTIONS: &[Section] = &[
         promoted: 5,
         ids: &["scout.assemblage.tenon", "scout.assemblage.mibois", "scout.assemblage.aronde", "scout.assemblage.cheville", "scout.assemblage.brelage"],
     },
-    Section { tab: "OPÉRATIONS", panel: "BOOLÉENS", promoted: 1, ids: &["solid.combine"] },
-    Section { tab: "OPÉRATIONS", panel: "MONTAGE", promoted: 1, ids: &["explode.create"] },
-    Section { tab: "FORMES", panel: "PRIMITIVES", promoted: 5, ids: &["solid.box", "solid.cylinder", "scout.profil.tube_rond", "solid.sphere", "solid.cone"] },
+    Section { tab: "OPÉRATIONS", panel: "MODIFIER", promoted: 2, ids: &["scout.piece.modifier", "scout.meuble.modifier"] },
+    Section { tab: "OPÉRATIONS", panel: "MONTAGE", promoted: 2, ids: &["timeline.play", "scout.meuble.detail"] },
     Section {
-        tab: "FORMES",
+        tab: "CRÉER",
         panel: "PROFILÉS MÉTAL",
-        promoted: 4,
-        ids: &["scout.profil.tube_carre", "scout.profil.corniere", "scout.profil.u", "scout.profil.i"],
-    },
-    Section { tab: "ESQUISSE", panel: "ESQUISSE", promoted: 2, ids: &["sketch.create", "sketch.edit"] },
-    Section { tab: "ESQUISSE", panel: "SOLIDE", promoted: 3, ids: &["solid.extrude", "solid.revolve", "solid.hole"] },
-    Section { tab: "ESQUISSE", panel: "COINS", promoted: 2, ids: &["solid.fillet", "solid.chamfer"] },
-    // Only while a linked design is edited in place, pinned at the right as FINISH SKETCH is.
-    Section { tab: "ESQUISSE", panel: "FINISH EDITING", promoted: 1, ids: &["component.finish_edit"] },
-    // The sketch's own tab, shown while a sketch is open: drawing, constraints, dimensions, corners.
-    Section {
-        tab: "SKETCH",
-        panel: "DESSIN",
         promoted: 5,
-        ids: &["sketch.line", "sketch.rectangle.two_point", "sketch.circle.center", "sketch.arc.three_point", "sketch.polygon.inscribed"],
+        ids: &["scout.profil.tube_rond", "scout.profil.tube_carre", "scout.profil.corniere", "scout.profil.u", "scout.profil.i"],
     },
-    Section { tab: "SKETCH", panel: "CONTRAINTES", promoted: 5, ids: &["sketch.constraint.horizontal_vertical", "sketch.constraint.parallel", "sketch.constraint.perpendicular", "sketch.constraint.equal", "sketch.constraint.coincident"] },
-    Section { tab: "SKETCH", panel: "COTES", promoted: 1, ids: &["sketch.dimension"] },
-    Section { tab: "SKETCH", panel: "COINS", promoted: 3, ids: &["sketch.fillet", "sketch.chamfer.equal_distance", "sketch.trim"] },
-    Section { tab: "SKETCH", panel: "MODIFIER", promoted: 2, ids: &["sketch.offset", "sketch.mirror"] },
-    Section { tab: "SKETCH", panel: "FINISH SKETCH", promoted: 2, ids: &["sketch.finish", "sketch.cancel"] },
 ];
 
 // Migration data only: Render commands remain registered, but have no live ribbon sections.
@@ -298,6 +280,7 @@ pub const RIBBON_LABELS: &[(&str, &str)] = &[
     ("surface.revolve", "Revolve"),
     ("surface.sweep", "Sweep"),
     ("timeline.dependents", "Dependents"),
+    ("timeline.play", "Montage pas à pas"),
     ("view.apply", "Restore View"),
     ("view.save", "Save View"),
 ];
