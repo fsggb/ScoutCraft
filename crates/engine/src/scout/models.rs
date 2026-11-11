@@ -373,20 +373,29 @@ pub fn fill(b: &mut Build, mode: Fill, (xa, xb): (f64, f64), (y0, y1): (f64, f64
             }
         }
         Fill::Tresse => {
-            // a thin rail down the middle, and every claie goes under the outer rails and over the
-            // middle one, or the other way round: two straight bars, bent at the middle
+            // a thin rail down the middle; every claie is one smooth spline that goes over the outer
+            // rails and under the middle one, or the other way round. Two kinds of claie, each
+            // an array: one body swept along the spline, copied by a pattern.
             let (ym, m, rail) = ((y0 + y1) / 2.0, d * 0.8, o.rail.max(d));
             let zc = z_top - rail / 2.0;
             b.bar("lien central", m, v(xa, ym, zc), v(xb, ym, zc));
-            let n = (((xb - xa) / (d * 1.5)).floor().max(1.0)) as usize;
-            let n = n.min(70);
-            let (up, down) = (z_top + d / 2.0, z_top - rail - d / 2.0);
-            let (over, under) = (zc + m / 2.0 + d / 2.0, zc - m / 2.0 - d / 2.0);
-            for i in 0..n {
-                let x = xa + (xb - xa) * (i as f64 + 0.5) / n as f64;
-                let (e, c) = if i % 2 == 0 { (up, under) } else { (down, over) };
-                b.bar("claie", d, v(x, y0, e), v(x, ym, c));
-                b.bar("claie", d, v(x, ym, c), v(x, y1, e));
+            let pitch = d * 1.5;
+            let n = (((xb - xa) / pitch).floor().max(2.0)) as usize;
+            let n = n.min(300);
+            let e = 20.0;
+            let total = (y1 - y0) + 2.0 * e;
+            let flat = (rail * 0.6).min(total / 5.0);
+            let zs = [0.0, e + flat, total / 2.0, total - e - flat, total];
+            let (up, down) = (d / 2.0, -rail - d / 2.0);
+            let (over, under) = (zc - z_top + m / 2.0 + d / 2.0, zc - z_top - m / 2.0 - d / 2.0);
+            let x0 = xa + (xb - xa - pitch * (n as f64 - 1.0)) / 2.0;
+            for (k, (ends, mid)) in [(up, under), (down, over)].into_iter().enumerate() {
+                let count = (n - k).div_ceil(2) as u32;
+                if count == 0 {
+                    continue;
+                }
+                let curve = vec![[ends, zs[0]], [ends, zs[1]], [mid, zs[2]], [ends, zs[3]], [ends, zs[4]]];
+                b.poles.push(Pole::claie("claie", d, v(x0 + pitch * k as f64, y0 - e, z_top), [0.0, 1.0, 0.0], total, curve, count, [2.0 * pitch, 0.0, 0.0]));
             }
         }
     }

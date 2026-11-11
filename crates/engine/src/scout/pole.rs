@@ -130,6 +130,24 @@ pub struct Pole {
     pub dir: V3,
     pub up: V3,
     pub ops: Vec<Op>,
+    /// A curved bar (a woven claie): the points (local x, local z) of the spline its axis follows,
+    /// in mm. `start` and `length` stay the straight extent along z.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub curve: Vec<[f64; 2]>,
+    /// Several identical poles side by side, `count` of them, each `step` from the last (world mm).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub array: Option<Array>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Array {
+    pub count: u32,
+    pub step: V3,
+}
+
+/// The poles with every array written out, one pole each.
+pub fn expand_all(poles: &[Pole]) -> Vec<Pole> {
+    poles.iter().flat_map(Pole::expand).collect()
 }
 
 fn default_up(dir: V3) -> V3 {
@@ -141,9 +159,17 @@ impl Pole {
     pub fn bar(role: &str, diameter: f64, p: V3, q: V3) -> Pole {
         let d = sub(q, p);
         let dir = norm(d);
-        Pole { role: role.to_string(), diameter, width: 0.0, length: len(d), start: 0.0, origin: p, dir, up: default_up(dir), ops: Vec::new() }
+        Pole { role: role.to_string(), diameter, width: 0.0, length: len(d), start: 0.0, origin: p, dir, up: default_up(dir), ops: Vec::new(), curve: Vec::new(), array: None }
     }
     /// A board (`thickness` × `width`) along `p → q`, its thickness towards `up`.
+    /// `count` curved claies (a spline through `curve`, local x and z in mm), `step` apart, the first
+    /// starting at `origin` and running along `dir`.
+    pub fn claie(role: &str, diameter: f64, origin: V3, dir: V3, length: f64, curve: Vec<[f64; 2]>, count: u32, step: V3) -> Pole {
+        let mut c = Pole::bar(role, diameter, origin, add(origin, mul(norm(dir), length)));
+        c.curve = curve;
+        c.array = (count > 1).then_some(Array { count, step });
+        c
+    }
     pub fn board(role: &str, thickness: f64, width: f64, p: V3, q: V3, up: V3) -> Pole {
         let mut b = Pole::bar(role, thickness, p, q);
         b.width = width;
@@ -198,7 +224,28 @@ impl Pole {
     }
     /// What it is cut to from the log: the visible length and its tenons.
     pub fn cut_length(&self) -> f64 {
-        self.length + self.tenon_total()
+        self.axis_length() + self.tenon_total()
+    }
+    /// The length of the axis: the visible length, or the curve's (a little over its chords).
+    pub fn axis_length(&self) -> f64 {
+        if self.curve.len() < 2 {
+            return self.length;
+        }
+        self.curve.windows(2).map(|w| ((w[1][0] - w[0][0]).powi(2) + (w[1][1] - w[0][1]).powi(2)).sqrt()).sum::<f64>() * 1.01
+    }
+    /// One pole per member of its array (itself when it has none).
+    pub fn expand(&self) -> Vec<Pole> {
+        match &self.array {
+            Some(a) if a.count > 1 => (0..a.count.min(400))
+                .map(|i| {
+                    let mut p = self.clone();
+                    p.array = None;
+                    p.origin = add(self.origin, mul(a.step, f64::from(i)));
+                    p
+                })
+                .collect(),
+            _ => vec![Pole { array: None, ..self.clone() }],
+        }
     }
     /// Cut off `by` mm at an end (the visible part only: no operation).
     pub fn trim(&mut self, end: End, by: f64) {
@@ -519,11 +566,13 @@ impl Build {
 
 /// Total length of wood in metres.
 pub fn wood_metres(poles: &[Pole]) -> f64 {
+    let poles = &expand_all(poles);
     poles.iter().filter(|p| p.role != "brêlage" && p.role != "ficelle").map(Pole::cut_length).sum::<f64>() / 1000.0
 }
 
 /// The overall size (x, y, z) of a set of poles.
 pub fn extent(poles: &[Pole]) -> [f64; 3] {
+    let poles = &expand_all(poles);
     let mut lo = [f64::MAX; 3];
     let mut hi = [f64::MIN; 3];
     for p in poles {

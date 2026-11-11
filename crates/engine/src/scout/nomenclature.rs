@@ -58,6 +58,7 @@ fn operations(p: &Pole) -> String {
 
 /// The three tables of a set of poles.
 pub fn of(poles: &[Pole]) -> Nomenclature {
+    let poles = &crate::scout::pole::expand_all(poles);
     let rows = cut_list(poles);
     let pieces: Vec<PieceRow> = rows
         .iter()
@@ -150,7 +151,7 @@ mod tests {
         let n = of(&poles_of("table"));
         assert!(!n.pieces.is_empty() && !n.assemblages.is_empty());
         assert!(n.materiel.iter().any(|r| r.designation == "Total bois"));
-        assert_eq!(n.pieces.iter().map(|r| r.qte).sum::<usize>(), poles_of("table").len());
+        assert_eq!(n.pieces.iter().map(|r| r.qte).sum::<usize>(), crate::scout::pole::expand_all(&poles_of("table")).len());
         assert!(n.pieces.iter().any(|r| r.assemblages.contains("mi-bois")));
     }
 

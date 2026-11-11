@@ -23,7 +23,7 @@ use crate::scout::models::{self, MODELS, Params};
 use crate::scout::dessin::{self, Cartouche, Format, Placed, SheetCfg, View};
 use crate::scout::nomenclature;
 use crate::scout::plan::{meuble_section, page_html, steps};
-use crate::scout::pole::{self, Build, End, MAX_POLES, Op, Pole, SplitMode, Style, TenonOpts, V3, add, cut_list, extent, joint_summary, mul, wood_metres};
+use crate::scout::pole::{self, Build, End, MAX_POLES, Op, Pole, SplitMode, Style, TenonOpts, V3, add, cut_list, extent, joint_summary, len, mul, wood_metres};
 use crate::{EngineError, Result, Session};
 
 const P_POLE: &str = "scout_pole";
@@ -445,11 +445,33 @@ fn dominant(v: V3) -> usize {
 }
 
 /// Makes the component of one pole under `parent`, builds and places it, saves its record.
+/// A bar whose axis is a spline (a woven claie): the body is swept along it, then copied by a
+/// pattern when the pole is an array.
+fn curved_body(s: &mut Session, name: &str, pole: &Pole) -> Result<()> {
+    let pts: Vec<[f64; 2]> = pole.curve.iter().map(|[x, z]| [*x, -*z]).collect();
+    run(s, "sketch.create", json!({"plane": "XZ"}))?;
+    let sketch = s.active_sketch.ok_or_else(|| e("no sketch".into()))?;
+    let made = run(s, "sketch.spline.fit_point", json!({"points": pts}))?;
+    let curve = made["curves"][0].as_str().ok_or_else(|| e("the spline has no curve".into()))?.to_string();
+    run(s, "sketch.finish", json!({}))?;
+    run(s, "solid.pipe", json!({"path_sketch": sketch, "path": [curve], "diameter": pole.diameter, "body_name": name}))?;
+    if let Some(a) = &pole.array {
+        let step = pole.local_dir(a.step);
+        let spacing = len(a.step);
+        if a.count > 1 && spacing > 0.0 {
+            run(s, "solid.pattern.rectangular", json!({"bodies": [name], "dir1": step, "count1": a.count, "spacing1": spacing}))?;
+        }
+    }
+    Ok(())
+}
+
 fn make_pole(s: &mut Session, parent: u64, kind: &str, name: &str, pole: &Pole, detail: bool) -> Result<(u64, u64)> {
     let c = run(s, "component.create", json!({"name": name, "parent": parent, "grounded": false}))?;
     let (comp, occ) = (id_of(&c, "component"), id_of(&c, "occurrence"));
     let (z0, z1) = pole.built_range();
-    if pole.width > 0.0 {
+    if !pole.curve.is_empty() {
+        curved_body(s, name, pole)?;
+    } else if pole.width > 0.0 {
         run(s, "solid.box", json!({"corner": [-pole.diameter / 2.0, -pole.width / 2.0, z0], "length": pole.diameter, "width": pole.width, "height": z1 - z0, "body_name": name}))?;
     } else {
         run(s, "solid.cylinder", json!({"base": [0.0, 0.0, z0], "axis": [0.0, 0.0, 1.0], "diameter": pole.diameter, "height": z1 - z0, "body_name": name}))?;
@@ -594,16 +616,18 @@ fn create_meuble(s: &mut Session, p: &Value) -> Result<Value> {
     }
     run(s, "component.activate", json!({"component": active}))?;
     Ok(json!({
-        "component": comp, "occurrence": occ, "name": name, "type": kind, "poles": poles.len(), "wood_m": wood_metres(&poles),
+        "component": comp, "occurrence": occ, "name": name, "type": kind, "poles": pole::expand_all(&poles).len(), "wood_m": wood_metres(&poles),
         "cut_list": rows_json(&poles), "joints": joints_json(&poles),
     }))
 }
 
 fn rows_json(poles: &[Pole]) -> Vec<Value> {
+    let poles = &pole::expand_all(poles);
     cut_list(poles).iter().map(|r| json!({"role": r.role, "count": r.count, "diameter": r.diameter, "width": r.width, "length": r.length, "cut_length": r.cut_length})).collect()
 }
 
 fn joints_json(poles: &[Pole]) -> Vec<Value> {
+    let poles = &pole::expand_all(poles);
     joint_summary(poles).iter().map(|(k, c)| json!({"joint": k, "count": c})).collect()
 }
 
@@ -1035,7 +1059,7 @@ fn loose(s: &mut Session, name: &str, kind: &str, poles: &[Pole], at: Option<V3>
         run(s, "occurrence.move", json!({"occurrence": occ, "matrix": [1.0, 0.0, 0.0, a[0], 0.0, 1.0, 0.0, a[1], 0.0, 0.0, 1.0, a[2]], "capture": true, "move_grounded": true}))?;
     }
     run(s, "component.activate", json!({"component": active}))?;
-    Ok(json!({"component": comp, "name": name, "poles": poles.len()}))
+    Ok(json!({"component": comp, "name": name, "poles": pole::expand_all(poles).len()}))
 }
 
 fn bounded(cmd: &str, p: &Value, key: &str, default: f64, lo: f64, hi: f64) -> Result<f64> {
@@ -1139,7 +1163,7 @@ fn read_meuble(s: &Session, id: u64) -> Option<Meuble> {
         [x, y, r] => (*x, *y, *r),
         _ => (0.0, 0.0, 0.0),
     };
-    let poles = s.doc.components.iter().filter(|k| k.parent == id).filter_map(|k| k.properties.get(P_POLE)).filter_map(|rec| serde_json::from_str(rec).ok()).collect();
+    let poles = s.doc.components.iter().filter(|k| k.parent == id).filter_map(|k| k.properties.get(P_POLE)).filter_map(|rec| serde_json::from_str::<Pole>(rec).ok()).flat_map(|p| p.expand()).collect();
     Some(Meuble { id, name: c.name.clone(), kind, place, poles })
 }
 
@@ -1271,7 +1295,7 @@ fn all_poles(s: &Session, root: Option<u64>) -> Vec<Pole> {
             _ => return false,
         }
     };
-    s.doc.components.iter().filter(|c| root.is_none_or(|r| under(c.id, r))).filter_map(|c| c.properties.get(P_POLE)).filter_map(|t| serde_json::from_str(t).ok()).collect()
+    s.doc.components.iter().filter(|c| root.is_none_or(|r| under(c.id, r))).filter_map(|c| c.properties.get(P_POLE)).filter_map(|t| serde_json::from_str::<Pole>(t).ok()).flat_map(|p| p.expand()).collect()
 }
 
 fn nomenclature_cmd(s: &mut Session, p: &Value) -> Result<Value> {

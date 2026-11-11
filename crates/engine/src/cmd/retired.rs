@@ -14,13 +14,12 @@ const FAMILIES: &[&str] = &[
 
 /// Single commands.
 const COMMANDS: &[&str] = &[
-    "solid.sweep", "solid.loft", "solid.torus", "solid.pipe", "solid.coil", "solid.rib", "solid.web", "solid.emboss",
+    "solid.sweep", "solid.loft", "solid.torus", "solid.coil", "solid.rib", "solid.web", "solid.emboss",
     "solid.boundary_fill", "solid.bounding_solid", "solid.draft", "solid.replace_face", "solid.scale", "solid.offset_face", "solid.split_face",
     "solid.split_body", "solid.pattern.path", "solid.shell",
     "sketch.line3d", "sketch.spline3d", "sketch.arc3d", "sketch.point3d", "sketch.move3d", "sketch.include_3d", "sketch.project_to_surface",
     "sketch.intersection_curve", "sketch.spun_profile", "sketch.isoparametric_curve", "sketch.fit_curves_to_section", "sketch.insert_svg",
-    "sketch.equation_curve", "sketch.equation_curve.edit", "sketch.conic", "sketch.blend_curve", "sketch.spline.fit_point",
-    "sketch.spline.control_point", "sketch.spline.control_point_5", "sketch.spline.insert_point", "sketch.spline.reverse",
+    "sketch.equation_curve", "sketch.equation_curve.edit", "sketch.conic", "sketch.blend_curve",     "sketch.spline.control_point", "sketch.spline.control_point_5", "sketch.spline.insert_point", "sketch.spline.reverse",
     "inspect.curvature_comb", "inspect.minimum_radius", "inspect.isocurve", "inspect.zebra", "inspect.environment_map",
     "inspect.accessibility", "inspect.curvature_map", "inspect.continuity", "inspect.draft", "inspect.parameter_sweep",
     "file.insert_mesh", "file.save_mesh", "file.send_to_slicer", "file.open_in_easyprint", "file.slicers", "body.print_face",

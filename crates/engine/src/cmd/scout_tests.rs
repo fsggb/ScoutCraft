@@ -421,3 +421,39 @@ fn changing_a_furniture_setting_builds_it_again_in_place() {
     assert!((plan["dimensions"]["length"].as_f64().unwrap_or(0.0) - 1600.0).abs() < 130.0, "{}", plan["dimensions"]);
     assert!(s.execute("scout.meuble.modifier", &json!({"meuble": "Banc A", "L": -5})).is_err());
 }
+
+#[test]
+fn a_pipe_follows_a_spline() {
+    let mut s = Session::default();
+    run(&mut s, "sketch.create", json!({"plane": "XZ"}));
+    let sk = run(&mut s, "sketch.spline.fit_point", json!({"points": [[10.0, 0.0], [10.0, -60.0], [-10.0, -300.0], [10.0, -540.0], [10.0, -600.0]]}));
+    eprintln!("{sk}");
+    let id = sk["curves"][0].as_str().unwrap_or("").to_string();
+    let active = s.active_sketch.map(|x| x.to_string()).unwrap_or_default();
+    eprintln!("sketch {active} curve {id}");
+    run(&mut s, "sketch.finish", json!({}));
+    let t = std::time::Instant::now();
+    let r = run(&mut s, "solid.pipe", json!({"path_sketch": 1, "path": [id], "diameter": 20, "body_name": "Claie"}));
+    eprintln!("{r} in {} ms", t.elapsed().as_millis());
+    let v = run(&mut s, "inspect.center_of_mass", json!({"bodies": ["Claie"]}))["volume"].as_f64().unwrap_or(0.0);
+    eprintln!("volume {v}");
+    assert!(v > 150_000.0 && v < 220_000.0, "{v}");
+}
+
+#[test]
+fn woven_claies_are_swept_along_splines_and_copied_by_a_pattern() {
+    let mut s = Session::default();
+    let t = std::time::Instant::now();
+    let r = run(&mut s, "scout.plateau", json!({"mode": "tresse", "long": 800, "larg": 500}));
+    eprintln!("plateau {} ms, {r}", t.elapsed().as_millis());
+    let st = s.world_state();
+    let claies = st.bodies.iter().filter(|b| b.name.starts_with("claie")).count();
+    assert!(claies >= 20, "{claies}");
+    // each claie is a curve that dips: its box is taller than one diameter
+    let tall = st.bodies.iter().filter(|b| b.name.starts_with("claie")).any(|b| {
+        let bb = b.mesh().bounds();
+        bb.max.z - bb.min.z > 40.0
+    });
+    assert!(tall, "the claies dip under and over the rails");
+    assert!(r["poles"].as_u64().unwrap_or(0) as usize >= claies, "{r}");
+}
