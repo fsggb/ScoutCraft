@@ -150,17 +150,20 @@ fn types() -> Value {
 }
 
 fn run(s: &mut Session, id: &str, p: Value) -> Result<Value> {
-    let t = std::time::Instant::now();
-    let r = s.execute(id, &p);
     #[cfg(test)]
-    PROFILE.with(|m| {
-        let mut m = m.borrow_mut();
-        let e = m.entry(id.to_string()).or_insert((0, 0));
-        e.0 += 1;
-        e.1 += t.elapsed().as_millis();
-    });
-    let _ = t;
-    r
+    {
+        let t = std::time::Instant::now();
+        let r = s.execute(id, &p);
+        PROFILE.with(|m| {
+            let mut m = m.borrow_mut();
+            let e = m.entry(id.to_string()).or_insert((0, 0));
+            e.0 += 1;
+            e.1 += t.elapsed().as_millis();
+        });
+        r
+    }
+    #[cfg(not(test))]
+    s.execute(id, &p)
 }
 
 #[cfg(test)]
@@ -241,21 +244,13 @@ fn tool_name(name: &str) -> String {
 /// A new body for a tool, then `solid.combine` of it into the pole's body: the interface's own
 /// Boolean, so every tenon, mortise, notch and split is a Combine in the history.
 fn combine(s: &mut Session, name: &str, tool: &str, operation: &str) -> Result<()> {
-    let t = std::time::Instant::now();
     run(s, "solid.combine", json!({"target": name, "tools": [tool], "operation": operation}))?;
-    #[cfg(test)]
-    eprintln!("  combine {operation} {name} <- {tool}: {} ms", t.elapsed().as_millis());
-    let _ = t;
     Ok(())
 }
 
 /// The same, but the tool is another pole's body and stays.
 fn combine_keep(s: &mut Session, name: &str, tool: &str, operation: &str) -> Result<()> {
-    let t = std::time::Instant::now();
     run(s, "solid.combine", json!({"target": name, "tools": [tool], "operation": operation, "keep_tools": true}))?;
-    #[cfg(test)]
-    eprintln!("  combine_keep {operation} {name} <- {tool}: {} ms", t.elapsed().as_millis());
-    let _ = t;
     Ok(())
 }
 
